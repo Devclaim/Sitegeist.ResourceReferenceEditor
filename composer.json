@@ -1,0 +1,21 @@
+{
+    "name": "sitegeist/resource-reference-editor",
+    "type": "neos-plugin",
+    "description": "Generic Neos inspector editor for creating and selecting referenced resource nodes",
+    "license": "GPL-3.0-or-later",
+    "require": {
+        "php": "^8.2",
+        "neos/neos-ui": "^9.1",
+        "packagefactory/opgm-neosadapter": "dev-main"
+    },
+    "autoload": {
+        "psr-4": {
+            "Sitegeist\\ResourceReferenceEditor\\": "Classes/"
+        }
+    },
+    "extra": {
+        "neos": {
+            "package-key": "Sitegeist.ResourceReferenceEditor"
+        }
+    }
+}

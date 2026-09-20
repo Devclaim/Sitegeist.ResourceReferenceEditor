@@ -1,0 +1,7 @@
+Neos:
+  Neos:
+    Ui:
+      resources:
+        javascript:
+          sitegeist-resource-reference-editor:
+            resource: 'resource://Sitegeist.ResourceReferenceEditor/Public/JavaScript/Plugin.js'
