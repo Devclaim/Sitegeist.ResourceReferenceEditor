@@ -5,7 +5,8 @@ import {ResourceNode} from '../types';
 export type Selection = {
     /** Selection mode: a click anywhere on a row picks it instead of opening it. */
     isSelecting: boolean;
-    enter: () => void;
+    /** Starts selecting, with the given resources already picked. */
+    enter: (contextPaths?: string[]) => void;
     leave: () => void;
     selection: string[];
     selected: ResourceNode[];
@@ -36,7 +37,10 @@ export const useSelection = (resources: ResourceNode[]): Selection => {
 
     return {
         isSelecting,
-        enter: () => setIsSelecting(true),
+        enter: (contextPaths = []) => {
+            setSelection(contextPaths);
+            setIsSelecting(true);
+        },
         leave,
         selection,
         selected: resources.filter(resource => selection.includes(resource.contextPath)),

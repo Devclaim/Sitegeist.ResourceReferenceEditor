@@ -41,6 +41,11 @@ export const useReferences = (props: EditorProps): References => {
         }
     };
 
+    /**
+     * Used when several resources were picked at once. The picked set is what is
+     * added, not the whole answer - references the property already holds are left
+     * alone, and are removed by clicking their own button instead.
+     */
     const addMany = (identifiers: string[]): void => {
         if (!isMultiple) {
             if (identifiers.length > 0) {

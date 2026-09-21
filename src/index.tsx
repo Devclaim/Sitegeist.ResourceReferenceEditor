@@ -35,6 +35,7 @@ manifest('Sitegeist.ResourceReferenceEditor', {}, (globalRegistry: Registry, {st
 
     const registries = {
         store,
+        globalRegistry,
         nodeTypesRegistry,
         saveHooksRegistry,
         validatorsRegistry,

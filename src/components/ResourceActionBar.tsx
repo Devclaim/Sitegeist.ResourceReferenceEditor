@@ -6,8 +6,9 @@ import {isHidden} from '../domain/resources';
 import {ResourceNode} from '../types';
 
 /**
- * The bar above the list. It always acts on what the editor is looking at: the
- * resource open in the inspector, or the selection while several are being picked.
+ * The footer below the list. It names what the editor is looking at - the resource
+ * open in the inspector, or the selection while several are being picked - and
+ * carries the actions that apply to it, so the two are read together.
  */
 export const ResourceActionBar: React.FC<{
     /** What the actions apply to - the inspected resource or the selection. */
@@ -17,17 +18,14 @@ export const ResourceActionBar: React.FC<{
     isSelecting: boolean;
     isLoading: boolean;
     isMultiple: boolean;
-    createLabel?: string;
-    onCreate: () => void;
+    /** True when every picked resource is already referenced. */
+    selectionIsReferenced: boolean;
     onDuplicate: () => void;
     onSetHidden: (hidden: boolean) => void;
     onDelete: () => void;
-    onEnterSelection: () => void;
-    onLeaveSelection: () => void;
     onSetSelection: (contextPaths: string[]) => void;
     onUseSelection: () => void;
-    /** Shown on the left when nothing is selected and nothing is open. */
-    status: string;
+    onUnuseSelection: () => void;
 }> = ({
     targets,
     visibleResources,
@@ -35,16 +33,13 @@ export const ResourceActionBar: React.FC<{
     isSelecting,
     isLoading,
     isMultiple,
-    createLabel,
-    onCreate,
+    selectionIsReferenced,
     onDuplicate,
     onSetHidden,
     onDelete,
-    onEnterSelection,
-    onLeaveSelection,
     onSetSelection,
     onUseSelection,
-    status
+    onUnuseSelection
 }) => {
     const {nodeTypesRegistry, t} = useRegistries();
 
@@ -56,19 +51,41 @@ export const ResourceActionBar: React.FC<{
         Boolean(nodeTypesRegistry.getNodeType(resource.nodeType)?.properties?._hidden));
     const allVisibleSelected = selection.length === visibleResources.length;
 
+    const status = (): string => {
+        if (isSelecting) {
+            return selection.length > 0
+                ? t('selection.count', '{count} selected', {count: selection.length})
+                : t('selection.hint', 'Click the resources to select them');
+        }
+
+        return hasTargets
+            ? targets[0].label
+            : t('action.noTarget', 'No resource selected');
+    };
+
     return (
-        <div className="sitegeist-resource-reference-editor__bulk">
-            <span className="sitegeist-resource-reference-editor__bulk-target">{status}</span>
-            <div className="sitegeist-resource-reference-editor__bulk-actions">
-                <Button
-                    type="button"
-                    style="lighter"
-                    disabled={isLoading}
-                    onClick={onCreate}
-                    title={createLabel}
-                >
-                    <Icon icon="plus" /> {t('action.new', 'New')}
-                </Button>
+        <div className="sitegeist-resource-reference-editor__footer">
+            <span
+                className={'sitegeist-resource-reference-editor__footer-target'
+                    + (hasTargets ? '' : ' sitegeist-resource-reference-editor__footer-target--empty')}
+            >
+                {status()}
+            </span>
+            <div className="sitegeist-resource-reference-editor__footer-actions">
+                {isSelecting && (
+                    <Button
+                        type="button"
+                        style="lighter"
+                        disabled={isLoading || visibleResources.length === 0}
+                        onClick={() => onSetSelection(allVisibleSelected
+                            ? []
+                            : visibleResources.map(resource => resource.contextPath))}
+                    >
+                        {allVisibleSelected
+                            ? t('action.deselectAll', 'Deselect all')
+                            : t('action.selectAll', 'Select all')}
+                    </Button>
+                )}
                 <Button
                     type="button"
                     style="lighter"
@@ -87,6 +104,27 @@ export const ResourceActionBar: React.FC<{
                     {' '}
                     {targetsAreHidden ? t('action.show', 'Show') : t('action.hide', 'Hide')}
                 </Button>
+                {/*
+                  * Picking resources that are all referenced already leaves nothing
+                  * to add, so the button offers the opposite instead of sitting
+                  * there doing nothing.
+                  */}
+                {isSelecting && isMultiple && (
+                    <Button
+                        className={'sitegeist-resource-reference-editor__bulk-use'
+                            + (selectionIsReferenced
+                                ? ' sitegeist-resource-reference-editor__bulk-use--remove'
+                                : '')}
+                        type="button"
+                        style="lighter"
+                        disabled={isLoading || selection.length === 0}
+                        onClick={selectionIsReferenced ? onUnuseSelection : onUseSelection}
+                    >
+                        {selectionIsReferenced
+                            ? <><Icon icon="times" /> {t('action.remove', 'Remove')}</>
+                            : <><Icon icon="check" /> {t('action.use', 'Use')}</>}
+                    </Button>
+                )}
                 <Button
                     type="button"
                     style="error"
@@ -96,46 +134,6 @@ export const ResourceActionBar: React.FC<{
                 >
                     <Icon icon="trash" /> {t('action.delete', 'Delete')}
                 </Button>
-                {isSelecting
-                    ? (
-                        <>
-                            <Button
-                                type="button"
-                                style="lighter"
-                                disabled={isLoading || visibleResources.length === 0}
-                                onClick={() => onSetSelection(allVisibleSelected
-                                    ? []
-                                    : visibleResources.map(resource => resource.contextPath))}
-                            >
-                                {allVisibleSelected
-                                    ? t('action.deselectAll', 'Deselect all')
-                                    : t('action.selectAll', 'Select all')}
-                            </Button>
-                            {isMultiple && (
-                                <Button
-                                    type="button"
-                                    style="success"
-                                    disabled={isLoading || selection.length === 0}
-                                    onClick={onUseSelection}
-                                >
-                                    <Icon icon="check" /> {t('action.use', 'Use')}
-                                </Button>
-                            )}
-                            <Button type="button" onClick={onLeaveSelection}>
-                                {t('action.done', 'Done')}
-                            </Button>
-                        </>
-                    )
-                    : (
-                        <Button
-                            type="button"
-                            style="lighter"
-                            disabled={isLoading || visibleResources.length === 0}
-                            onClick={onEnterSelection}
-                        >
-                            <Icon icon="list-check" /> {t('action.selectMultiple', 'Select multiple')}
-                        </Button>
-                    )}
             </div>
         </div>
     );

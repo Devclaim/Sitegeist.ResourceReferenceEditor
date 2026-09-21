@@ -10,7 +10,6 @@ use Neos\ContentRepository\Core\DimensionSpace\OriginDimensionSpacePoint;
 use Neos\ContentRepository\Core\Feature\NodeCreation\Command\CreateNodeAggregateWithNode;
 use Neos\ContentRepository\Core\Feature\NodeModification\Dto\PropertyValuesToWrite;
 use Neos\ContentRepository\Core\Feature\RootNodeCreation\Command\CreateRootNodeAggregateWithNode;
-use Neos\ContentRepository\Core\Feature\WorkspaceRebase\Command\RebaseWorkspace;
 use Neos\ContentRepository\Core\NodeType\NodeTypeName;
 use Neos\ContentRepository\Core\Projection\ContentGraph\Filter\FindSubtreeFilter;
 use Neos\ContentRepository\Core\Projection\ContentGraph\Node;
@@ -21,7 +20,6 @@ use Neos\ContentRepository\Core\SharedModel\Node\NodeName;
 use Neos\ContentRepository\Core\SharedModel\Workspace\WorkspaceName;
 use Neos\ContentRepositoryRegistry\ContentRepositoryRegistry;
 use Neos\Flow\Annotations as Flow;
-use Psr\Log\LoggerInterface;
 
 /**
  * Resolves the collections resources are stored in.
@@ -31,9 +29,15 @@ use Psr\Log\LoggerInterface;
  *
  *     /<Sitegeist.ResourceReferenceEditor:Root>/<collection>/<resource>
  *
- * Root and collections are created on demand, always in the live workspace and in
- * the root generalization of the dimension space, so a collection created in the
- * most general dimension shines through into all specializations.
+ * Root, collections and the resources in them live in the live workspace, the way
+ * Sitegeist.Taxonomy manages its vocabularies: resources are shared vocabulary, not
+ * draft content of one document. A resource kept in an editor's workspace could not
+ * be published together with the document that references it - the document's
+ * publication would carry a reference to a node that does not exist in live yet.
+ *
+ * Collections are created in the root generalization of the dimension space, so a
+ * collection shines through into all specializations instead of existing per
+ * language.
  */
 #[Flow\Scope('singleton')]
 class ResourceCollectionService
@@ -44,21 +48,17 @@ class ResourceCollectionService
     #[Flow\InjectConfiguration(package: 'Sitegeist.ResourceReferenceEditor', path: 'contentRepository')]
     protected array $configuration;
 
-    #[Flow\Inject]
-    protected ?LoggerInterface $logger = null;
-
     public function __construct(
         private readonly ContentRepositoryRegistry $contentRepositoryRegistry,
     ) {
     }
 
     /**
-     * The node address of the collection with the given name, as seen from the
-     * given workspace and dimension. Creates root and collection if they are missing.
+     * The node address of the collection with the given name in the given dimension.
+     * Creates root and collection if they are missing.
      */
     public function findOrCreateCollectionAddress(
         ContentRepositoryId $contentRepositoryId,
-        WorkspaceName $workspaceName,
         DimensionSpacePoint $dimensionSpacePoint,
         string $collectionName,
         ?string $collectionTitle = null,
@@ -68,12 +68,10 @@ class ResourceCollectionService
         $nodeName = NodeName::fromString($collectionName);
 
         $collection = $this->findCollection($contentRepository, $rootNodeAggregateId, $nodeName);
-        $created = false;
 
         if ($collection !== null) {
             $collectionNodeAggregateId = $collection->aggregateId;
         } else {
-            $created = true;
             $collectionNodeAggregateId = NodeAggregateId::create();
             $contentRepository->handle(
                 CreateNodeAggregateWithNode::create(
@@ -94,55 +92,26 @@ class ResourceCollectionService
             );
         }
 
-        // Root and collections are created in live. A workspace that was forked
-        // before does not see them until it is rebased, and the editor would be
-        // handed an address that resolves to nothing.
-        if ($created && !$workspaceName->isLive()) {
-            $this->makeVisibleInWorkspace($contentRepository, $workspaceName);
-        }
-
         // Hand back an address that actually resolves - otherwise the editor runs
         // into an empty FlowQuery context and an error that says nothing.
         $visibleCollection = $contentRepository
-            ->getContentSubgraph($workspaceName, $dimensionSpacePoint)
+            ->getContentSubgraph(WorkspaceName::forLive(), $dimensionSpacePoint)
             ->findNodeById($collectionNodeAggregateId);
 
         if ($visibleCollection === null) {
             throw new \RuntimeException(sprintf(
-                'The resource collection "%s" exists in the live workspace, but workspace "%s" '
-                . 'does not see it yet. Publish or discard the changes in that workspace, or rebase it.',
+                'The resource collection "%s" was created, but is not visible in dimension %s.',
                 $collectionName,
-                $workspaceName->value,
+                json_encode($dimensionSpacePoint->coordinates),
             ), 1758460000);
         }
 
         return NodeAddress::create(
             $contentRepositoryId,
-            $workspaceName,
+            WorkspaceName::forLive(),
             $dimensionSpacePoint,
             $collectionNodeAggregateId,
         );
-    }
-
-    /**
-     * Rebases the workspace so it sees what was just created in live. Rebasing fails
-     * when the workspace holds changes that cannot be replayed - in that case the
-     * collection shows up after the next publish or discard, which is better than
-     * losing the editor's work here.
-     */
-    private function makeVisibleInWorkspace(
-        ContentRepository $contentRepository,
-        WorkspaceName $workspaceName,
-    ): void {
-        try {
-            $contentRepository->handle(RebaseWorkspace::create($workspaceName));
-        } catch (\Throwable $exception) {
-            $this->logger?->warning(sprintf(
-                'Could not rebase workspace "%s" after creating a resource collection: %s',
-                $workspaceName->value,
-                $exception->getMessage()
-            ));
-        }
     }
 
     private function findCollection(

@@ -41,6 +41,12 @@
             <trans-unit id="action.new" xml:space="preserve">
                 <source>New</source>
             </trans-unit>
+            <trans-unit id="action.noTarget" xml:space="preserve">
+                <source>No resource selected</source>
+            </trans-unit>
+            <trans-unit id="action.remove" xml:space="preserve">
+                <source>Remove</source>
+            </trans-unit>
             <trans-unit id="action.selectAll" xml:space="preserve">
                 <source>Select all</source>
             </trans-unit>
@@ -56,9 +62,6 @@
             <trans-unit id="action.use" xml:space="preserve">
                 <source>Use</source>
             </trans-unit>
-            <trans-unit id="dialog.title" xml:space="preserve">
-                <source>Resources</source>
-            </trans-unit>
             <trans-unit id="error.creationBlocked" xml:space="preserve">
                 <source>{type} cannot be created here: {properties} must be provided on creation. Give these properties a default value, make them nullable, or promote them to the creation dialog (showInCreationDialog).</source>
             </trans-unit>
@@ -70,12 +73,6 @@
             </trans-unit>
             <trans-unit id="inspector.noConfiguration" xml:space="preserve">
                 <source>This node type has no inspector configuration.</source>
-            </trans-unit>
-            <trans-unit id="list.count" xml:space="preserve">
-                <source>{count} resources</source>
-            </trans-unit>
-            <trans-unit id="list.countOne" xml:space="preserve">
-                <source>1 resource</source>
             </trans-unit>
             <trans-unit id="list.empty" xml:space="preserve">
                 <source>No resources found.</source>
@@ -112,9 +109,6 @@
             </trans-unit>
             <trans-unit id="resource.hiddenTitle" xml:space="preserve">
                 <source>This resource is hidden</source>
-            </trans-unit>
-            <trans-unit id="resource.removeReference" xml:space="preserve">
-                <source>Click to remove this reference</source>
             </trans-unit>
             <trans-unit id="selection.count" xml:space="preserve">
                 <source>{count} selected</source>

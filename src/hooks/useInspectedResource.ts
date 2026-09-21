@@ -3,11 +3,12 @@ import backend from '@neos-project/neos-ui-backend-connector';
 import {actions} from '@neos-project/neos-ui-redux-store';
 
 import {forwardFeedbacks} from '../api/feedback';
+import {syncEditingWorkspace} from '../api/workspace';
 import {useRegistries} from '../context/Registries';
 import {allItemsOf, inspectorTabsFor} from '../domain/nodeTypes';
 import {resolveDraft} from '../domain/saveHooks';
 import {validateItems} from '../domain/validation';
-import {editingWorkspaceName, inWorkspace} from '../domain/workspace';
+import {RESOURCE_WORKSPACE_NAME, inWorkspace} from '../domain/workspace';
 import {DraftValue, InspectorTab, ResourceNode} from '../types';
 import {ResourceCollection} from './useResourceCollection';
 
@@ -130,7 +131,7 @@ export const useInspectedResource = (
 
         await collection.run(async () => {
             const resolved = await resolveDraft(draft, saveHooksRegistry);
-            const subject = inWorkspace(node.contextPath, editingWorkspaceName(store));
+            const subject = inWorkspace(node.contextPath, RESOURCE_WORKSPACE_NAME);
             const changes = Object.entries(resolved).map(([propertyName, value]) => ({
                 type: 'Neos.Neos.Ui:Property',
                 subject,
@@ -140,6 +141,11 @@ export const useInspectedResource = (
             if (changes.length > 0) {
                 const response = await backend.get().endpoints.change(changes);
                 forwardFeedbacks(store, response);
+                // The change went to live, so the document's workspace is a step
+                // behind until it catches up - and the canvas would render the old
+                // state if it were reloaded before that.
+                await syncEditingWorkspace(store);
+                collection.touch();
                 store.dispatch(actions.UI.ContentCanvas.reload());
             }
 

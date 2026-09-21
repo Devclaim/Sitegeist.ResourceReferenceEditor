@@ -10,6 +10,7 @@ import {Store} from '../types';
  */
 export type Registries = {
     store: Store;
+    globalRegistry: any;
     nodeTypesRegistry: any;
     saveHooksRegistry: any;
     validatorsRegistry: any;

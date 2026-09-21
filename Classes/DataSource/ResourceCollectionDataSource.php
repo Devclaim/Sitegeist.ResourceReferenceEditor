@@ -20,8 +20,8 @@ use Sitegeist\ResourceReferenceEditor\Domain\ResourceCollectionService;
  *
  *     /neos/service/data-source/sitegeist-resource-collections?node=<nodeAddress>&collection=authors
  *
- * Content repository, workspace and dimension are taken from the node the editor is
- * working on, so a collection is always addressed from the editing session.
+ * Content repository and dimension are taken from the node the editor is working on;
+ * the workspace is always live, where resources are managed.
  */
 class ResourceCollectionDataSource extends AbstractDataSource
 {
@@ -56,9 +56,10 @@ class ResourceCollectionDataSource extends AbstractDataSource
 
         $title = $arguments['title'] ?? null;
 
+        // Only the content repository and the dimension come from the node being
+        // edited - resources themselves live in the live workspace.
         $nodeAddress = $this->resourceCollectionService->findOrCreateCollectionAddress(
             $node->contentRepositoryId,
-            $node->workspaceName,
             $node->dimensionSpacePoint,
             $collection,
             is_string($title) ? $title : null,

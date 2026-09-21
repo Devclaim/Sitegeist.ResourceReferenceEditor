@@ -1,5 +1,5 @@
 import React from 'react';
-import {Button, CheckBox, Icon} from '@neos-project/react-ui-components';
+import {CheckBox, Icon} from '@neos-project/react-ui-components';
 
 import {useRegistries} from '../context/Registries';
 import {isHidden} from '../domain/resources';
@@ -33,9 +33,19 @@ export const ResourceListItem: React.FC<{
     const {nodeTypesRegistry, i18nRegistry, t} = useRegistries();
     const nodeType = nodeTypesRegistry.getNodeType(resource.nodeType);
     const activate = isSelecting ? onToggleSelection : onOpen;
+    const element = React.useRef<HTMLDivElement | null>(null);
+
+    // A resource that has just been created, or one opened from elsewhere, may sit
+    // outside the scrolled part of the list - so the list follows it.
+    React.useEffect(() => {
+        if (isActive) {
+            element.current?.scrollIntoView({block: 'nearest'});
+        }
+    }, [isActive]);
 
     return (
         <div
+            ref={element}
             role="button"
             tabIndex={0}
             className={[
@@ -59,7 +69,17 @@ export const ResourceListItem: React.FC<{
             )}
             <Icon icon={nodeType?.ui?.icon ?? 'file'} />
             <div className="sitegeist-resource-reference-editor__item-label">
-                <strong>
+                {/*
+                  * The name comes from the node's label, which the node type decides
+                  * (an Eel expression, or getNeosLabel() on an OPGM node type). A
+                  * resource whose label is empty is shown by its type, marked as the
+                  * placeholder it is rather than looking like a real name.
+                  */}
+                <strong
+                    className={resource.label
+                        ? ''
+                        : 'sitegeist-resource-reference-editor__item-unnamed'}
+                >
                     {resource.label
                         || translate(i18nRegistry, nodeType?.ui?.label)
                         || resource.identifier}
@@ -68,33 +88,50 @@ export const ResourceListItem: React.FC<{
                     {translate(i18nRegistry, nodeType?.ui?.label) || resource.nodeType}
                 </small>
             </div>
-            {!isSelecting && (
-                <span className="sitegeist-resource-reference-editor__item-actions">
-                    {isHidden(resource) && (
-                        <span
-                            className="sitegeist-resource-reference-editor__hidden-badge"
-                            title={t('resource.hiddenTitle', 'This resource is hidden')}
-                        >
-                            <Icon icon="eye-slash" /> {t('resource.hidden', 'Hidden')}
-                        </span>
-                    )}
-                    <Button
-                        type="button"
-                        style={isReferenced ? 'success' : 'lighter'}
-                        title={isReferenced
-                            ? t('resource.removeReference', 'Click to remove this reference')
-                            : undefined}
-                        onClick={(event: React.MouseEvent) => {
-                            event.stopPropagation();
-                            onToggleReference();
-                        }}
+            {/* While selecting, the row keeps its badge and its button - they just
+                stop taking clicks, so a click anywhere on the row selects it. */}
+            <span
+                className={'sitegeist-resource-reference-editor__item-actions'
+                    + (isSelecting ? ' sitegeist-resource-reference-editor__item-actions--inert' : '')}
+            >
+                {isHidden(resource) && (
+                    <span
+                        className="sitegeist-resource-reference-editor__hidden-badge"
+                        title={t('resource.hiddenTitle', 'This resource is hidden')}
                     >
-                        {isReferenced
-                            ? <><Icon icon="check" /> {t('action.inUse', 'In use')}</>
-                            : t('action.use', 'Use')}
-                    </Button>
-                </span>
-            )}
+                        <Icon icon="eye-slash" /> {t('resource.hidden', 'Hidden')}
+                    </span>
+                )}
+                {/*
+                  * Deliberately not a Neos button: a full button on every row is
+                  * louder than the row itself. This is a quiet control that shows
+                  * up when the row is hovered - except on a resource that is in
+                  * use, which says so at all times and offers to undo it under the
+                  * cursor.
+                  */}
+                <button
+                    type="button"
+                    className={'sitegeist-resource-reference-editor__use'
+                        + (isReferenced ? ' sitegeist-resource-reference-editor__use--active' : '')}
+                    onClick={(event: React.MouseEvent) => {
+                        event.stopPropagation();
+                        onToggleReference();
+                    }}
+                >
+                    {isReferenced
+                        ? (
+                            <>
+                                <span className="sitegeist-resource-reference-editor__use-state">
+                                    <Icon icon="check" /> {t('action.inUse', 'In use')}
+                                </span>
+                                <span className="sitegeist-resource-reference-editor__use-action">
+                                    <Icon icon="times" /> {t('action.remove', 'Remove')}
+                                </span>
+                            </>
+                        )
+                        : <><Icon icon="plus" /> {t('action.use', 'Use')}</>}
+                </button>
+            </span>
         </div>
     );
 };

@@ -4,3 +4,4 @@ import {ResourceNode} from '../types';
 export const isHidden = (resource: ResourceNode | null | undefined): boolean =>
     Boolean(resource?.tags?.disabled) || Boolean(resource?.properties?._hidden);
 
+

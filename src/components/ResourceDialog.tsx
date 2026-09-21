@@ -11,6 +11,7 @@ import {ResourceNode} from '../types';
 import {ResourceActionBar} from './ResourceActionBar';
 import {ResourceInspector} from './ResourceInspector';
 import {ResourceList} from './ResourceList';
+import {ResourceToolbar} from './ResourceToolbar';
 
 /**
  * The dialog itself: the collection on the left, the inspector of the resource that
@@ -58,29 +59,43 @@ export const ResourceDialog: React.FC<{
         ? selection.selected
         : (inspectedResource ? [inspectedResource] : []);
 
-    const status = (): string => {
-        if (selection.isSelecting) {
-            return selection.selection.length > 0
-                ? t('selection.count', '{count} selected', {count: selection.selection.length})
-                : t('selection.hint', 'Click the resources to select them');
-        }
-
-        if (inspectedResource) {
-            return inspectedResource.label;
-        }
-
-        return visibleResources.length === 1
-            ? t('list.countOne', '1 resource')
-            : t('list.count', '{count} resources', {count: visibleResources.length});
-    };
-
     return (
         <Dialog
             isOpen={isOpen}
-            title={t('dialog.title', 'Resources')}
+            /* No title: the dialog is the resource list, and a headline on top of
+               the list only pushed everything down. */
+            title=""
+
             style="jumbo"
             onRequestClose={onClose}
+            /* The resource actions share the dialog's own footer row, so they sit
+               as far out of the way as the close button next to them. */
             actions={[
+                <ResourceActionBar
+                    key="actions"
+                    targets={targets}
+                    visibleResources={visibleResources}
+                    selection={selection.selection}
+                    isSelecting={selection.isSelecting}
+                    isLoading={collection.isLoading}
+                    isMultiple={references.isMultiple}
+                    selectionIsReferenced={selection.selected.length > 0
+                        && selection.selected.every(
+                            resource => references.referenced.includes(resource.identifier)
+                        )}
+                    onDuplicate={() => actions.duplicate(targets)}
+                    onSetHidden={hidden => actions.setHidden(targets, hidden)}
+                    onDelete={() => actions.requestRemoval(targets)}
+                    onSetSelection={selection.setSelection}
+                    onUseSelection={() => {
+                        references.addMany(selection.selected.map(resource => resource.identifier));
+                        selection.leave();
+                    }}
+                    onUnuseSelection={() => {
+                        references.drop(selection.selected.map(resource => resource.identifier));
+                        selection.leave();
+                    }}
+                />,
                 <Button key="close" type="button" onClick={onClose}>
                     {t('action.close', 'Close')}
                 </Button>
@@ -96,33 +111,20 @@ export const ResourceDialog: React.FC<{
                             {collection.error}
                         </div>
                     )}
-                    <input
-                        className="sitegeist-resource-reference-editor__search"
-                        type="search"
-                        value={filter}
-                        placeholder={t('list.search', 'Filter resources')}
-                        onChange={event => setFilter(event.currentTarget.value)}
-                    />
-                    <ResourceActionBar
-                        targets={targets}
-                        visibleResources={visibleResources}
-                        selection={selection.selection}
-                        isSelecting={selection.isSelecting}
+                    <ResourceToolbar
+                        filter={filter}
+                        onFilter={setFilter}
                         isLoading={collection.isLoading}
-                        isMultiple={references.isMultiple}
+                        isSelecting={selection.isSelecting}
+                        canSelect={visibleResources.length > 0}
                         createLabel={createLabel}
-                        status={status()}
                         onCreate={actions.create}
-                        onDuplicate={() => actions.duplicate(targets)}
-                        onSetHidden={hidden => actions.setHidden(targets, hidden)}
-                        onDelete={() => actions.requestRemoval(targets)}
-                        onEnterSelection={selection.enter}
+                        onEnterSelection={() => selection.enter(
+                            // Carry the resource that is open over into the
+                            // selection, so switching modes does not lose it.
+                            inspectedResource ? [inspectedResource.contextPath] : []
+                        )}
                         onLeaveSelection={selection.leave}
-                        onSetSelection={selection.setSelection}
-                        onUseSelection={() => {
-                            references.addMany(selection.selected.map(resource => resource.identifier));
-                            selection.leave();
-                        }}
                     />
                     <ResourceList
                         resources={visibleResources}

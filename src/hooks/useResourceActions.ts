@@ -4,9 +4,10 @@ import {actions} from '@neos-project/neos-ui-redux-store';
 
 import {loadUsage} from '../api/endpoints';
 import {applyOwnPendingChange, forwardFeedbacks} from '../api/feedback';
+import {syncEditingWorkspace} from '../api/workspace';
 import {useRegistries} from '../context/Registries';
 import {creationDataFor} from '../domain/nodeTypes';
-import {editingWorkspaceName, inWorkspace} from '../domain/workspace';
+import {RESOURCE_WORKSPACE_NAME, inWorkspace} from '../domain/workspace';
 import {EditorProps, ResourceNode, ResourceUsage} from '../types';
 import {InspectedResource} from './useInspectedResource';
 import {References} from './useReferences';
@@ -87,6 +88,11 @@ export const useResourceActions = (
                 throw new Error(t('error.creationFailed', 'The resource could not be created.'));
             }
 
+            // The resource was created in live; the document's own workspace only
+            // sees it once it has caught up, and the reference is written there.
+            await syncEditingWorkspace(store);
+            collection.touch();
+
             references.add(created.identifier);
             applyOwnPendingChange(store, props.identifier);
 
@@ -112,12 +118,11 @@ export const useResourceActions = (
         }
 
         await collection.run(async () => {
-            const workspaceName = editingWorkspaceName(store);
             const container = collection.container ?? (await collection.reload()).container;
             const response = await backend.get().endpoints.change(
                 resourcesToCopy.map(resource => ({
                     type: 'Neos.Neos.Ui:CopyInto',
-                    subject: inWorkspace(resource.contextPath, workspaceName),
+                    subject: inWorkspace(resource.contextPath, RESOURCE_WORKSPACE_NAME),
                     payload: {parentContextPath: container.contextPath}
                 }))
             );
@@ -128,6 +133,9 @@ export const useResourceActions = (
                 .filter((feedback: any) => feedback?.type === 'Neos.Neos.Ui:NodeCreated')
                 .map((feedback: any) => feedback?.payload?.identifier)
                 .filter(Boolean);
+
+            await syncEditingWorkspace(store);
+            collection.touch();
 
             const {resources} = await collection.reload();
             const lastCopy = resources.find(
@@ -152,18 +160,19 @@ export const useResourceActions = (
         }
 
         await collection.run(async () => {
-            const workspaceName = editingWorkspaceName(store);
             const response = await backend.get().endpoints.change(
                 resourcesToChange.map(resource => ({
                     type: 'Neos.Neos.Ui:Property',
-                    subject: inWorkspace(resource.contextPath, workspaceName),
+                    subject: inWorkspace(resource.contextPath, RESOURCE_WORKSPACE_NAME),
                     payload: {propertyName: '_hidden', value: hidden}
                 }))
             );
 
             forwardFeedbacks(store, response);
-            store.dispatch(actions.UI.ContentCanvas.reload());
 
+            await syncEditingWorkspace(store);
+            collection.touch();
+            store.dispatch(actions.UI.ContentCanvas.reload());
             await collection.reload();
 
             // The visibility group of the inspector shows the same flag, so the open
@@ -206,16 +215,17 @@ export const useResourceActions = (
         setPendingRemoval(null);
 
         await collection.run(async () => {
-            const workspaceName = editingWorkspaceName(store);
             const response = await backend.get().endpoints.change(
                 resourcesToRemove.map(resource => ({
                     type: 'Neos.Neos.Ui:RemoveNode',
-                    subject: inWorkspace(resource.contextPath, workspaceName),
+                    subject: inWorkspace(resource.contextPath, RESOURCE_WORKSPACE_NAME),
                     payload: {}
                 }))
             );
 
             forwardFeedbacks(store, response);
+            await syncEditingWorkspace(store);
+            collection.touch();
             references.drop(resourcesToRemove.map(resource => resource.identifier));
 
             const removedContextPaths = resourcesToRemove.map(resource => resource.contextPath);

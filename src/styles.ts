@@ -5,6 +5,22 @@
  */
 
 export const styles = `
+    /*
+     * Neos puts the node's breadcrumb under a referenced node. For a resource that
+     * is its path in the resource subtree - the same for every resource of a
+     * collection - so it is replaced by the resource type, which is what the list
+     * in the dialog shows as well. The text is hidden rather than the element, so
+     * the line keeps its styling and the item keeps its height.
+     */
+    .sitegeist-resource-reference-editor__reference
+        [class*="multiLineWithThumbnail__secondaryLabel"] {
+        font-size: 0;
+    }
+    .sitegeist-resource-reference-editor__reference
+        [class*="multiLineWithThumbnail__secondaryLabel"]::after {
+        content: var(--sitegeist-resource-type, "");
+        font-size: var(--fontSize-Small, 12px);
+    }
     .sitegeist-resource-reference-editor__actions {
         display: flex;
         gap: 8px;
@@ -36,23 +52,41 @@ export const styles = `
     [role="dialog"]:has(.sitegeist-resource-reference-editor__layout) ~ [role="dialog"] {
         z-index: calc(var(--zIndex-SecondaryInspectorElevated, 60) + 1);
     }
+    /*
+     * The dialog itself must not scroll - only the list and the inspector do. Neos'
+     * dialog body scrolls by default (overflow-y: auto on .dialog__body) and its
+     * contents are capped at 80vh, so the body is turned into a flex box of a fixed
+     * height that shrinks with the dialog instead of growing a scrollbar of its own.
+     */
+    .dialog__body:has(> .sitegeist-resource-reference-editor__layout) {
+        display: flex;
+        overflow: hidden;
+        height: 70vh;
+        min-height: 0;
+    }
+    /* The title row of the dialog, which carries no title here. */
+    div:has(> .dialog__body > .sitegeist-resource-reference-editor__layout) > div:first-child {
+        display: none;
+    }
     .sitegeist-resource-reference-editor__layout {
+        flex: 1;
+        min-height: 0;
         display: flex;
         align-items: stretch;
-        height: 70vh;
     }
     .sitegeist-resource-reference-editor__content {
         flex: 1;
         min-width: 0;
         display: flex;
         flex-direction: column;
-        gap: 16px;
+        gap: 12px;
         padding: 16px;
-        overflow: auto;
+        overflow: hidden;
         background: var(--colors-ContrastDarkest, #141414);
     }
     .sitegeist-resource-reference-editor__search {
-        width: 100%;
+        flex: 1;
+        min-width: 0;
         box-sizing: border-box;
         border: 1px solid var(--colors-ContrastDark, #3f3f3f);
         background: var(--colors-ContrastDarker, #222);
@@ -61,10 +95,11 @@ export const styles = `
         font: inherit;
     }
     .sitegeist-resource-reference-editor__list {
+        flex: 1;
+        min-height: 0;
+        overflow: auto;
         display: flex;
         flex-direction: column;
-        gap: 1px;
-        background: var(--colors-ContrastDark, #3f3f3f);
     }
     .sitegeist-resource-reference-editor__item {
         display: flex;
@@ -74,22 +109,56 @@ export const styles = `
         min-height: 56px;
         padding: 10px 12px;
         border: 0;
+        border-bottom: 1px solid var(--colors-ContrastDark, #3f3f3f);
         text-align: left;
         font: inherit;
         color: var(--colors-ContrastBrightest, #fff);
         background: var(--colors-ContrastDarker, #222);
         cursor: pointer;
     }
+    .sitegeist-resource-reference-editor__item:last-child {
+        border-bottom: 0;
+    }
+    /*
+     * Three states have to stay apart: the row under the cursor, the row open in the
+     * inspector, and a row that is picked. Hover stays a neutral lift, while the two
+     * states that mean something are tinted in their own colour - the plain
+     * background is declared first for browsers without color-mix().
+     */
     .sitegeist-resource-reference-editor__item:hover {
         background: var(--colors-ContrastNeutral, #323232);
     }
-    .sitegeist-resource-reference-editor__item--selected {
-        background: var(--colors-ContrastNeutral, #323232);
-        box-shadow: inset 3px 0 0 0 var(--colors-Success, #00a338);
-    }
     .sitegeist-resource-reference-editor__item--active {
         background: var(--colors-ContrastNeutral, #323232);
-        box-shadow: inset 2px 0 0 0 var(--colors-PrimaryBlue, #00adee);
+        background: color-mix(
+            in srgb,
+            var(--colors-PrimaryBlue, #00adee) 12%,
+            var(--colors-ContrastDarker, #222)
+        );
+        box-shadow: inset 3px 0 0 0 var(--colors-PrimaryBlue, #00adee);
+    }
+    .sitegeist-resource-reference-editor__item--active:hover {
+        background: color-mix(
+            in srgb,
+            var(--colors-PrimaryBlue, #00adee) 20%,
+            var(--colors-ContrastNeutral, #323232)
+        );
+    }
+    .sitegeist-resource-reference-editor__item--selected {
+        background: var(--colors-ContrastNeutral, #323232);
+        background: color-mix(
+            in srgb,
+            var(--colors-Success, #00a338) 14%,
+            var(--colors-ContrastDarker, #222)
+        );
+        box-shadow: inset 3px 0 0 0 var(--colors-Success, #00a338);
+    }
+    .sitegeist-resource-reference-editor__item--selected:hover {
+        background: color-mix(
+            in srgb,
+            var(--colors-Success, #00a338) 24%,
+            var(--colors-ContrastNeutral, #323232)
+        );
     }
     .sitegeist-resource-reference-editor__item-label {
         flex: 1;
@@ -106,23 +175,72 @@ export const styles = `
         color: var(--colors-ContrastBright, #999);
         margin-top: 3px;
     }
-    .sitegeist-resource-reference-editor__bulk {
+    /* A resource whose node label is empty is named by its type, as a placeholder. */
+    .sitegeist-resource-reference-editor__item-unnamed {
+        font-style: italic;
+        color: var(--colors-ContrastBright, #999);
+    }
+    .sitegeist-resource-reference-editor__toolbar {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        flex-shrink: 0;
+    }
+    /*
+     * The actions live in the dialog's own footer row, next to its close button:
+     * Neos lays that row out right aligned, so it is turned into a flex
+     * row and our entry - the first one - is given the free space on the left.
+     */
+    div:has(> .dialog__body > .sitegeist-resource-reference-editor__layout)
+        > div:last-child {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        /* The row sits on the edge of the dialog otherwise. */
+        padding: 0 16px 16px;
+    }
+    /*
+     * Our entry is held to the width of the list column, so the actions line up
+     * under the list and the dialog's close button stays under the inspector.
+     */
+    div:has(> .dialog__body > .sitegeist-resource-reference-editor__layout)
+        > div:last-child > span:first-child {
+        flex: 1;
+        min-width: 0;
+        max-width: calc(100% - var(--size-SidebarWidth, 320px));
+    }
+    div:has(> .dialog__body > .sitegeist-resource-reference-editor__layout)
+        > div:last-child > span:last-child {
+        margin-left: auto;
+    }
+    .sitegeist-resource-reference-editor__footer {
         display: flex;
         align-items: center;
         justify-content: space-between;
-        gap: 8px;
-        padding: 8px 12px;
-        background: var(--colors-ContrastNeutral, #323232);
+        gap: 16px;
     }
-    .sitegeist-resource-reference-editor__bulk-actions {
+    .sitegeist-resource-reference-editor__footer-actions {
         display: flex;
         gap: 8px;
         flex-shrink: 0;
     }
-    .sitegeist-resource-reference-editor__bulk-target {
+    /* The bulk equivalent of the control in the rows, in the same colours. */
+    .sitegeist-resource-reference-editor__footer-actions
+        .sitegeist-resource-reference-editor__bulk-use {
+        color: var(--colors-Success, #00a338);
+    }
+    .sitegeist-resource-reference-editor__footer-actions
+        .sitegeist-resource-reference-editor__bulk-use--remove {
+        color: var(--colors-Warn, #ff8700);
+    }
+    .sitegeist-resource-reference-editor__footer-target {
+        min-width: 0;
         overflow: hidden;
         text-overflow: ellipsis;
         white-space: nowrap;
+    }
+    .sitegeist-resource-reference-editor__footer-target--empty {
+        color: var(--colors-ContrastBright, #999);
     }
     .sitegeist-resource-reference-editor__item-select {
         display: flex;
@@ -133,6 +251,58 @@ export const styles = `
         align-items: center;
         gap: 8px;
         flex-shrink: 0;
+    }
+    /*
+     * The control that puts a resource into the edited property. It is quiet rather
+     * than hidden - no button chrome, muted until the resource is in use - so the
+     * list reads as a list. The minimum width keeps the row from twitching when the
+     * label changes under the cursor.
+     */
+    .sitegeist-resource-reference-editor__use {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        gap: 6px;
+        min-width: 7em;
+        padding: 4px 8px;
+        border: 0;
+        border-radius: 2px;
+        background: var(--colors-ContrastDark, #3f3f3f);
+        font: inherit;
+        color: var(--colors-ContrastBright, #999);
+        cursor: pointer;
+    }
+    .sitegeist-resource-reference-editor__use--active {
+        color: var(--colors-Success, #00a338);
+    }
+    .sitegeist-resource-reference-editor__use:hover {
+        color: var(--colors-ContrastBrightest, #fff);
+    }
+    .sitegeist-resource-reference-editor__use--active:hover {
+        color: var(--colors-Warn, #ff8700);
+    }
+    /* In use at rest, what a click would do under the cursor. */
+    .sitegeist-resource-reference-editor__use-action {
+        display: none;
+    }
+    .sitegeist-resource-reference-editor__use:hover
+        .sitegeist-resource-reference-editor__use-state {
+        display: none;
+    }
+    .sitegeist-resource-reference-editor__use:hover
+        .sitegeist-resource-reference-editor__use-action {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+    }
+    .sitegeist-resource-reference-editor__use-state {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+    }
+    /* While selecting, the whole row is one target - nothing in it takes a click. */
+    .sitegeist-resource-reference-editor__item-actions--inert {
+        pointer-events: none;
     }
     /*
      * A hidden resource reads like one - but only its name is dimmed, so the badge
