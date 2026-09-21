@@ -1,7 +1,23 @@
 Neos:
   Neos:
+    userInterface:
+      translation:
+        # Parses this package's XLIFF into the backend's xliff.json, which is what
+        # makes the labels available to the editor's JavaScript.
+        autoInclude:
+          'Sitegeist.ResourceReferenceEditor':
+            - Main
     Ui:
       resources:
         javascript:
           sitegeist-resource-reference-editor:
             resource: 'resource://Sitegeist.ResourceReferenceEditor/Public/JavaScript/Plugin.js'
+
+Sitegeist:
+  ResourceReferenceEditor:
+    contentRepository:
+      # The root node type of the resource subtree. Derive your own type from it
+      # to constrain which collections may exist.
+      rootNodeType: 'Sitegeist.ResourceReferenceEditor:Root'
+      # The node type used for the per resource type collections below the root.
+      collectionNodeType: 'Sitegeist.ResourceReferenceEditor:Collection'

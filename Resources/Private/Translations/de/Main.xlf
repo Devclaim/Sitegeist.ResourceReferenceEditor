@@ -1,0 +1,167 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<xliff version="1.2" xmlns="urn:oasis:names:tc:xliff:document:1.2">
+    <file original="" product-name="Sitegeist.ResourceReferenceEditor" source-language="en" datatype="plaintext" target-language="de">
+        <body>
+            <trans-unit id="action.apply" xml:space="preserve">
+                <source>Apply</source>
+                <target>Übernehmen</target>
+            </trans-unit>
+            <trans-unit id="action.cancel" xml:space="preserve">
+                <source>Cancel</source>
+                <target>Abbrechen</target>
+            </trans-unit>
+            <trans-unit id="action.close" xml:space="preserve">
+                <source>Close</source>
+                <target>Schließen</target>
+            </trans-unit>
+            <trans-unit id="action.createNew" xml:space="preserve">
+                <source>Create new</source>
+                <target>Neu anlegen</target>
+            </trans-unit>
+            <trans-unit id="action.delete" xml:space="preserve">
+                <source>Delete</source>
+                <target>Löschen</target>
+            </trans-unit>
+            <trans-unit id="action.deselectAll" xml:space="preserve">
+                <source>Deselect all</source>
+                <target>Auswahl aufheben</target>
+            </trans-unit>
+            <trans-unit id="action.discard" xml:space="preserve">
+                <source>Discard</source>
+                <target>Verwerfen</target>
+            </trans-unit>
+            <trans-unit id="action.done" xml:space="preserve">
+                <source>Done</source>
+                <target>Fertig</target>
+            </trans-unit>
+            <trans-unit id="action.duplicate" xml:space="preserve">
+                <source>Duplicate</source>
+                <target>Duplizieren</target>
+            </trans-unit>
+            <trans-unit id="action.hide" xml:space="preserve">
+                <source>Hide</source>
+                <target>Verbergen</target>
+            </trans-unit>
+            <trans-unit id="action.hideInstead" xml:space="preserve">
+                <source>Hide instead</source>
+                <target>Stattdessen verbergen</target>
+            </trans-unit>
+            <trans-unit id="action.inUse" xml:space="preserve">
+                <source>In use</source>
+                <target>Verwendet</target>
+            </trans-unit>
+            <trans-unit id="action.new" xml:space="preserve">
+                <source>New</source>
+                <target>Neu</target>
+            </trans-unit>
+            <trans-unit id="action.selectAll" xml:space="preserve">
+                <source>Select all</source>
+                <target>Alle auswählen</target>
+            </trans-unit>
+            <trans-unit id="action.selectMultiple" xml:space="preserve">
+                <source>Select multiple</source>
+                <target>Mehrere auswählen</target>
+            </trans-unit>
+            <trans-unit id="action.show" xml:space="preserve">
+                <source>Show</source>
+                <target>Einblenden</target>
+            </trans-unit>
+            <trans-unit id="action.showAll" xml:space="preserve">
+                <source>Show all</source>
+                <target>Alle anzeigen</target>
+            </trans-unit>
+            <trans-unit id="action.use" xml:space="preserve">
+                <source>Use</source>
+                <target>Verwenden</target>
+            </trans-unit>
+            <trans-unit id="dialog.title" xml:space="preserve">
+                <source>Resources</source>
+                <target>Ressourcen</target>
+            </trans-unit>
+            <trans-unit id="error.creationBlocked" xml:space="preserve">
+                <source>{type} cannot be created here: {properties} must be provided on creation. Give these properties a default value, make them nullable, or promote them to the creation dialog (showInCreationDialog).</source>
+                <target>{type} kann hier nicht angelegt werden: {properties} muss beim Anlegen angegeben werden. Diesen Eigenschaften einen Standardwert geben, sie nullable machen oder in den Erstellungsdialog aufnehmen (showInCreationDialog).</target>
+            </trans-unit>
+            <trans-unit id="error.creationFailed" xml:space="preserve">
+                <source>The resource could not be created.</source>
+                <target>Die Ressource konnte nicht angelegt werden.</target>
+            </trans-unit>
+            <trans-unit id="inspector.empty" xml:space="preserve">
+                <source>Select a resource to edit its properties.</source>
+                <target>Eine Ressource wählen, um ihre Eigenschaften zu bearbeiten.</target>
+            </trans-unit>
+            <trans-unit id="inspector.noConfiguration" xml:space="preserve">
+                <source>This node type has no inspector configuration.</source>
+                <target>Für diesen Knotentyp ist kein Inspektor konfiguriert.</target>
+            </trans-unit>
+            <trans-unit id="list.count" xml:space="preserve">
+                <source>{count} resources</source>
+                <target>{count} Ressourcen</target>
+            </trans-unit>
+            <trans-unit id="list.countOne" xml:space="preserve">
+                <source>1 resource</source>
+                <target>1 Ressource</target>
+            </trans-unit>
+            <trans-unit id="list.empty" xml:space="preserve">
+                <source>No resources found.</source>
+                <target>Keine Ressourcen gefunden.</target>
+            </trans-unit>
+            <trans-unit id="list.loading" xml:space="preserve">
+                <source>Loading…</source>
+                <target>Wird geladen…</target>
+            </trans-unit>
+            <trans-unit id="list.search" xml:space="preserve">
+                <source>Filter resources</source>
+                <target>Ressourcen filtern</target>
+            </trans-unit>
+            <trans-unit id="removal.checking" xml:space="preserve">
+                <source>Checking references…</source>
+                <target>Referenzen werden geprüft…</target>
+            </trans-unit>
+            <trans-unit id="removal.explanation" xml:space="preserve">
+                <source>Deleting removes the resource from the collection, and every document that references it loses that reference. Hiding it instead keeps those references intact.</source>
+                <target>Beim Löschen wird die Ressource aus der Sammlung entfernt, und jedes Dokument, das sie referenziert, verliert diese Referenz. Verbergen erhält die Referenzen.</target>
+            </trans-unit>
+            <trans-unit id="removal.notReferenced" xml:space="preserve">
+                <source>Not referenced</source>
+                <target>Nicht referenziert</target>
+            </trans-unit>
+            <trans-unit id="removal.referenced" xml:space="preserve">
+                <source>Referenced {count} times</source>
+                <target>{count}-mal referenziert</target>
+            </trans-unit>
+            <trans-unit id="removal.referencedOnce" xml:space="preserve">
+                <source>Referenced once</source>
+                <target>Einmal referenziert</target>
+            </trans-unit>
+            <trans-unit id="removal.title" xml:space="preserve">
+                <source>Delete {count} resources?</source>
+                <target>{count} Ressourcen löschen?</target>
+            </trans-unit>
+            <trans-unit id="removal.titleOne" xml:space="preserve">
+                <source>Delete this resource?</source>
+                <target>Diese Ressource löschen?</target>
+            </trans-unit>
+            <trans-unit id="resource.hidden" xml:space="preserve">
+                <source>Hidden</source>
+                <target>Verborgen</target>
+            </trans-unit>
+            <trans-unit id="resource.hiddenTitle" xml:space="preserve">
+                <source>This resource is hidden</source>
+                <target>Diese Ressource ist verborgen</target>
+            </trans-unit>
+            <trans-unit id="resource.removeReference" xml:space="preserve">
+                <source>Click to remove this reference</source>
+                <target>Klicken, um diese Referenz zu entfernen</target>
+            </trans-unit>
+            <trans-unit id="selection.count" xml:space="preserve">
+                <source>{count} selected</source>
+                <target>{count} ausgewählt</target>
+            </trans-unit>
+            <trans-unit id="selection.hint" xml:space="preserve">
+                <source>Click the resources to select them</source>
+                <target>Die Ressourcen anklicken, um sie auszuwählen</target>
+            </trans-unit>
+        </body>
+    </file>
+</xliff>

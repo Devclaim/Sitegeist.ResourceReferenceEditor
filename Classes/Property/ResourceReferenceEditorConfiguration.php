@@ -13,6 +13,12 @@ use PackageFactory\OPGM\NeosAdapter\PropertyDeclaration\Editor\AbstractEditorCon
 #[\Attribute(\Attribute::TARGET_PROPERTY | \Attribute::TARGET_PARAMETER)]
 final readonly class ResourceReferenceEditorConfiguration extends AbstractEditorConfiguration
 {
+    /**
+     * Mirrors Sitegeist.ResourceReferenceEditor.contentRepository.rootNodeType. Pass
+     * an explicit $startingPoint when that setting points at a derived node type.
+     */
+    private const DEFAULT_ROOT_NODE_TYPE = 'Sitegeist.ResourceReferenceEditor:Root';
+
     private ?NodeTypeNames $nodeTypes;
     private ?AbsoluteNodePath $startingPoint;
 
@@ -33,9 +39,28 @@ final readonly class ResourceReferenceEditorConfiguration extends AbstractEditor
                 $fqns,
             ))
             : null;
-        $this->startingPoint = $startingPoint !== null
-            ? AbsoluteNodePath::fromString($startingPoint)
-            : null;
+        // Resources live outside the site, so searching from the site node would
+        // never find them: the reference search starts in the collection instead.
+        $this->startingPoint = AbsoluteNodePath::fromString(
+            $startingPoint ?? sprintf('/<%s>/%s', self::DEFAULT_ROOT_NODE_TYPE, $create->collection)
+        );
+    }
+
+    /**
+     * A property typed as a collection of resources is edited with the multi value
+     * reference editor - the same distinction Neos makes between its Reference and
+     * References editors.
+     */
+    private static function isMultiple(?\ReflectionNamedType $propertyType): bool
+    {
+        if ($propertyType === null) {
+            return false;
+        }
+
+        $type = $propertyType->getName();
+
+        return $type === 'array'
+            || (class_exists($type) && NodeTypeNameExtractor::tryFromCollectionType($type) !== null);
     }
 
     /** @return array<string,mixed> */
@@ -49,6 +74,7 @@ final readonly class ResourceReferenceEditorConfiguration extends AbstractEditor
                 'startingPoint' => $this->startingPoint?->serializeToString(),
                 'threshold' => $this->threshold,
                 'disabled' => $this->disabled,
+                'multiple' => self::isMultiple($propertyType) ?: null,
                 'resourceCreation' => $this->create->toConfigurationArray(),
             ], static fn (mixed $value): bool => $value !== null),
         ];

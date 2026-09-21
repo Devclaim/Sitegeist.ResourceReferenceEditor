@@ -1,0 +1,35 @@
+#
+# Resources live in their own root subtree, not below a site - the same shape
+# Sitegeist.Taxonomy uses for vocabularies. That keeps centrally managed content
+# out of the site's content tree and out of site exports.
+#
+'Sitegeist.ResourceReferenceEditor:Root':
+  label: 'Resources'
+  # Root aggregates must be of type root - the content repository rejects anything
+  # else (ConstraintChecks::requireNodeTypeToBeOfTypeRoot).
+  superTypes:
+    'Neos.ContentRepository:Root': true
+  ui:
+    label: 'Resources'
+    icon: 'box-archive'
+  constraints:
+    nodeTypes:
+      '*': false
+      'Sitegeist.ResourceReferenceEditor:Collection': true
+
+'Sitegeist.ResourceReferenceEditor:Collection':
+  superTypes:
+    'Neos.Neos:Node': true
+  ui:
+    label: 'Resource collection'
+    icon: 'folder'
+  properties:
+    title:
+      type: string
+      ui:
+        label: 'Title'
+        inspector:
+          group: 'document'
+  constraints:
+    nodeTypes:
+      '*': true
