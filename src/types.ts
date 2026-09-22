@@ -10,9 +10,22 @@ export type ResourceNode = {
     identifier: string;
     nodeType: string;
     label: string;
-    properties: Record<string, unknown>;
+    properties?: Record<string, unknown>;
     /** Subtree tags as node info serializes them: `{disabled: true}` when hidden. */
     tags?: Record<string, boolean | null>;
+    /** The node name, which for a tethered child is its slot in the parent. */
+    name?: string;
+    /** Tethered children belong to their parent and cannot be changed on their own. */
+    tethered?: boolean;
+    hidden?: boolean;
+    /** How many children this node has - what makes a row descendable. */
+    childCount?: number;
+    /**
+     * The children, when they came with the node. The list reads several levels at
+     * once and shows them unfolded; a level that was not read is fetched when its
+     * node is unfolded.
+     */
+    children?: ResourceNode[];
 };
 
 

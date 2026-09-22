@@ -1,10 +1,53 @@
-import {EditorOptions, InspectorGroup, InspectorItem, InspectorTab, ResourceCreation} from '../types';
+import {translate} from '../i18n';
+import {InspectorGroup, InspectorItem, InspectorTab, ResourceCreation} from '../types';
 
-export const nodeTypeFilter = (options: EditorOptions): string =>
-    (options.nodeTypes ?? [options.resourceCreation.type])
-        .map(nodeTypeName => `[instanceof ${nodeTypeName}]`)
-        .join(',');
+/** The node type every resource derives from - declared in Classes/NodeTypes. */
+export const RESOURCE_NODE_TYPE = 'Sitegeist.ResourceReferenceEditor:Resource';
 
+/** One node type that can be created, ready to be shown in a menu. */
+export type CreatableNodeType = {
+    nodeTypeName: string;
+    label: string;
+    icon?: string;
+};
+
+/**
+ * True when the edited property accepts this node type. A resource that is only in
+ * the list to be managed - a child of another kind, say - cannot be referenced, so
+ * it gets no Use control and is left out of Select all.
+ */
+export const isUsableType = (
+    nodeTypesRegistry: any,
+    nodeTypeName: string,
+    usableNodeTypes: string[]
+): boolean => usableNodeTypes.some(
+    candidate => nodeTypesRegistry.isOfType?.(nodeTypeName, candidate) ?? nodeTypeName === candidate
+);
+
+export const isResourceType = (nodeTypesRegistry: any, nodeTypeName: string): boolean =>
+    Boolean(nodeTypesRegistry.isOfType?.(nodeTypeName, RESOURCE_NODE_TYPE));
+
+/**
+ * The node types that may be created below a node: the ones its constraints allow,
+ * narrowed to resources. A resource contains resources and nothing else, so a
+ * content type that a hand written constraint let through is not offered here.
+ */
+export const resourceChildTypesOf = (
+    nodeTypesRegistry: any,
+    i18nRegistry: any,
+    nodeTypeName: string
+): CreatableNodeType[] =>
+    ((nodeTypesRegistry.getAllowedChildNodeTypes?.(nodeTypeName) ?? []) as string[])
+        .map(name => ({name, nodeType: nodeTypesRegistry.getNodeType(name)}))
+        .filter(({name, nodeType}) => Boolean(nodeType)
+            && nodeType.abstract !== true
+            && isResourceType(nodeTypesRegistry, name))
+        .map(({name, nodeType}) => ({
+            nodeTypeName: name,
+            label: translate(i18nRegistry, nodeType?.ui?.label) || name,
+            icon: nodeType?.ui?.icon
+        }))
+        .sort((one, other) => one.label.localeCompare(other.label));
 
 export const editableItems = (group: InspectorGroup): InspectorItem[] =>
     (group.items ?? []).filter(item => item.type === 'editor' && item.editor && item.hidden !== true);

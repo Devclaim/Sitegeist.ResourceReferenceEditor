@@ -2,11 +2,12 @@ import React from 'react';
 import {Button, Icon} from '@neos-project/react-ui-components';
 
 import {useRegistries} from '../context/Registries';
+import {CreateGroup, CreateMenu, CreateOption} from './CreateMenu';
 
 /**
- * The row above the list: what to see. Filtering, creating, and switching the list
- * into selection mode - everything that acts on a resource sits in the footer below
- * the list instead, next to the name of the resource it would act on.
+ * The row above the list: what to see, and what to create. Everything that acts on a
+ * resource that already exists sits in the footer below the list instead, next to the
+ * name of the resource it would act on.
  */
 export const ResourceToolbar: React.FC<{
     filter: string;
@@ -14,8 +15,9 @@ export const ResourceToolbar: React.FC<{
     isLoading: boolean;
     isSelecting: boolean;
     canSelect: boolean;
-    createLabel?: string;
-    onCreate: () => void;
+    /** What the New button offers, grouped by the node the options go into. */
+    createGroups: CreateGroup[];
+    onCreate: (option: CreateOption) => void;
     onEnterSelection: () => void;
     onLeaveSelection: () => void;
 }> = ({
@@ -24,7 +26,7 @@ export const ResourceToolbar: React.FC<{
     isLoading,
     isSelecting,
     canSelect,
-    createLabel,
+    createGroups,
     onCreate,
     onEnterSelection,
     onLeaveSelection
@@ -40,15 +42,11 @@ export const ResourceToolbar: React.FC<{
                 placeholder={t('list.search', 'Filter resources')}
                 onChange={event => onFilter(event.currentTarget.value)}
             />
-            <Button
-                type="button"
-                style="lighter"
-                disabled={isLoading}
-                onClick={onCreate}
-                title={createLabel}
-            >
-                <Icon icon="plus" /> {t('action.new', 'New')}
-            </Button>
+            <CreateMenu
+                groups={createGroups}
+                isDisabled={isLoading}
+                onCreate={onCreate}
+            />
             {isSelecting
                 ? (
                     <Button type="button" style="lighter" onClick={onLeaveSelection}>

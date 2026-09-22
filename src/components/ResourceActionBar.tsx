@@ -13,13 +13,18 @@ import {ResourceNode} from '../types';
 export const ResourceActionBar: React.FC<{
     /** What the actions apply to - the inspected resource or the selection. */
     targets: ResourceNode[];
-    visibleResources: ResourceNode[];
+    /** The rows Select all covers - everything in the list, children included. */
+    selectableResources: ResourceNode[];
     selection: string[];
     isSelecting: boolean;
     isLoading: boolean;
     isMultiple: boolean;
-    /** True when every picked resource is already referenced. */
+    /** False when nothing picked can be referenced at all. */
+    canUseSelection: boolean;
+    /** True when every picked resource that can be referenced already is. */
     selectionIsReferenced: boolean;
+    /** The selected node and what it sits below, nearest last. */
+    path: string[];
     onDuplicate: () => void;
     onSetHidden: (hidden: boolean) => void;
     onDelete: () => void;
@@ -28,12 +33,14 @@ export const ResourceActionBar: React.FC<{
     onUnuseSelection: () => void;
 }> = ({
     targets,
-    visibleResources,
+    selectableResources,
     selection,
     isSelecting,
     isLoading,
     isMultiple,
+    canUseSelection,
     selectionIsReferenced,
+    path,
     onDuplicate,
     onSetHidden,
     onDelete,
@@ -43,13 +50,16 @@ export const ResourceActionBar: React.FC<{
 }) => {
     const {nodeTypesRegistry, t} = useRegistries();
 
-    const hasTargets = targets.length > 0;
+    // A tethered child is part of its parent: it cannot be duplicated, hidden or
+    // deleted on its own.
+    const hasTargets = targets.length > 0 && targets.every(target => !target.tethered);
     const targetsAreHidden = hasTargets && targets.every(isHidden);
     // Hiding is a `_hidden` property change, which only node types deriving from
     // Neos.Neos:Hidable have - without this the button would quietly do nothing.
     const targetsCanBeHidden = hasTargets && targets.every(resource =>
         Boolean(nodeTypesRegistry.getNodeType(resource.nodeType)?.properties?._hidden));
-    const allVisibleSelected = selection.length === visibleResources.length;
+    const allSelectableSelected = selectableResources.length > 0
+        && selectableResources.every(resource => selection.includes(resource.contextPath));
 
     const status = (): string => {
         if (isSelecting) {
@@ -58,8 +68,10 @@ export const ResourceActionBar: React.FC<{
                 : t('selection.hint', 'Click the resources to select them');
         }
 
-        return hasTargets
-            ? targets[0].label
+        // The path of the selected node, so a child deep in the tree says where it
+        // belongs rather than standing there by name alone.
+        return path.length > 0
+            ? path.join(' › ')
             : t('action.noTarget', 'No resource selected');
     };
 
@@ -76,12 +88,12 @@ export const ResourceActionBar: React.FC<{
                     <Button
                         type="button"
                         style="lighter"
-                        disabled={isLoading || visibleResources.length === 0}
-                        onClick={() => onSetSelection(allVisibleSelected
+                        disabled={isLoading || selectableResources.length === 0}
+                        onClick={() => onSetSelection(allSelectableSelected
                             ? []
-                            : visibleResources.map(resource => resource.contextPath))}
+                            : selectableResources.map(resource => resource.contextPath))}
                     >
-                        {allVisibleSelected
+                        {allSelectableSelected
                             ? t('action.deselectAll', 'Deselect all')
                             : t('action.selectAll', 'Select all')}
                     </Button>
@@ -117,7 +129,7 @@ export const ResourceActionBar: React.FC<{
                                 : '')}
                         type="button"
                         style="lighter"
-                        disabled={isLoading || selection.length === 0}
+                        disabled={isLoading || !canUseSelection}
                         onClick={selectionIsReferenced ? onUnuseSelection : onUseSelection}
                     >
                         {selectionIsReferenced

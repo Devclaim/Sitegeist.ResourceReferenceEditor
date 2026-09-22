@@ -45,7 +45,12 @@ export const useResourceCollection = (options: EditorOptions, routes: any): Reso
 
     const reload = React.useCallback(async () => {
         const resolvedContainer = await resolveResourceContainer(store, creation, routes);
-        const loadedResources = await loadResources(options, resolvedContainer.contextPath);
+        const loadedResources = await loadResources(
+            store,
+            routes,
+            options,
+            resolvedContainer.contextPath
+        );
 
         setContainer(resolvedContainer);
         setResources(loadedResources);

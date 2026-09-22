@@ -16,9 +16,15 @@ import {References} from './useReferences';
 import {ResourceCollection} from './useResourceCollection';
 import {Selection} from './useSelection';
 
+/** Where a new node goes, when it is not a resource in the collection itself. */
+export type CreationTarget = {
+    parentContextPath: string;
+    nodeTypeName: string;
+};
+
 export type ResourceActions = {
-    /** Asks for the resource's values, then creates it. */
-    create: () => Promise<void>;
+    /** Asks for the node's values, then creates it. */
+    create: (target?: CreationTarget) => Promise<void>;
     duplicate: (resources: ResourceNode[]) => Promise<void>;
     setHidden: (resources: ResourceNode[], hidden: boolean) => Promise<void>;
     /** Opens the delete warning and fills it with what references the resources. */
@@ -42,7 +48,9 @@ export const useResourceActions = (
     references: References,
     selection: Selection,
     inspected: InspectedResource,
-    openDialog: () => void
+    openDialog: () => void,
+    /** Opens a node and reads its children again, after one was created below it. */
+    revealChildren: (contextPath: string) => Promise<ResourceNode[]>
 ): ResourceActions => {
     const {store, nodeTypesRegistry, saveHooksRegistry, t} = useRegistries();
     const creation = props.options.resourceCreation;
@@ -55,47 +63,63 @@ export const useResourceActions = (
      * Asks for the resource's values with Neos' own node creation dialog and creates
      * it from them. A resource type that asks for nothing is created right away.
      */
-    const create = async (): Promise<void> => {
+    const create = async (target?: CreationTarget): Promise<void> => {
         openDialog();
         collection.setError(null);
 
-        const nodeType = nodeTypesRegistry.getNodeType(creation.type);
+        const nodeTypeName = target?.nodeTypeName ?? creation.type;
+        const nodeType = nodeTypesRegistry.getNodeType(nodeTypeName);
         const elements = creationElementsFor(nodeType);
-        const missing = missingCreationProperties(creation, elements);
 
-        if (missing.length > 0) {
-            collection.setError(t(
-                'error.creationBlocked',
-                '{type} cannot be created here: {properties} must be provided on creation. '
-                + 'Give these properties a default value, make them nullable, or promote '
-                + 'them to the creation dialog (showInCreationDialog).',
-                {type: creation.type, properties: missing.join(', ')}
-            ));
+        // Only the configured resource type is checked against the constructor
+        // arguments the PHP side resolved. For a child node type that list does not
+        // exist - OPGM promotes required arguments into the creation dialog by
+        // itself, which is what the dialog then asks for.
+        if (!target) {
+            const missing = missingCreationProperties(creation, elements);
 
-            return;
+            if (missing.length > 0) {
+                collection.setError(t(
+                    'error.creationBlocked',
+                    '{type} cannot be created here: {properties} must be provided on creation. '
+                    + 'Give these properties a default value, make them nullable, or promote '
+                    + 'them to the creation dialog (showInCreationDialog).',
+                    {type: nodeTypeName, properties: missing.join(', ')}
+                ));
+
+                return;
+            }
         }
+
+        const parentContextPath = target?.parentContextPath
+            ?? (collection.container ?? (await collection.reload()).container).contextPath;
 
         if (elements.length === 0) {
-            await confirmCreation({});
+            await confirmCreation({}, nodeTypeName, parentContextPath, !target);
 
             return;
         }
 
-        const container = collection.container ?? (await collection.reload()).container;
-        const values = await openCreationDialog(store, nodeType, creation.type, container.contextPath);
+        const values = await openCreationDialog(store, nodeType, nodeTypeName, parentContextPath);
 
         if (values === null) {
             return;
         }
 
-        await confirmCreation(values);
+        await confirmCreation(values, nodeTypeName, parentContextPath, !target);
     };
 
     /**
      * Creates the resource from what the dialog collected and opens it in the
      * inspector. Node type default values are applied by the server.
      */
-    const confirmCreation = async (values: CreationDialogValues): Promise<void> => {
+    const confirmCreation = async (
+        values: CreationDialogValues,
+        nodeTypeName: string,
+        parentContextPath: string,
+        /** A resource in the collection is referenced right away; a child is not. */
+        isResourceOfTheCollection: boolean
+    ): Promise<void> => {
         const data: Record<string, unknown> = {};
 
         // Editors may hand work over that can only run before the value is sent -
@@ -107,18 +131,19 @@ export const useResourceActions = (
 
         // A required argument the editor left untouched is sent as an empty value of
         // the right type: the entity rejects null, and the dialog has had its say.
-        for (const property of creation.requiredProperties ?? []) {
-            if (data[property.name] === undefined || data[property.name] === null) {
-                data[property.name] = emptyValueFor(property.type);
+        if (isResourceOfTheCollection) {
+            for (const property of creation.requiredProperties ?? []) {
+                if (data[property.name] === undefined || data[property.name] === null) {
+                    data[property.name] = emptyValueFor(property.type);
+                }
             }
         }
 
         await collection.run(async () => {
-            const container = collection.container ?? (await collection.reload()).container;
             const response = await backend.get().endpoints.change([{
                 type: 'Neos.Neos.Ui:CreateInto',
-                subject: container.contextPath,
-                payload: {nodeType: creation.type, data}
+                subject: parentContextPath,
+                payload: {nodeType: nodeTypeName, data}
             }]);
 
             forwardFeedbacks(store, response);
@@ -136,11 +161,19 @@ export const useResourceActions = (
             await syncEditingWorkspace(store);
             collection.touch();
 
-            references.add(created.identifier);
-            applyOwnPendingChange(store, props.identifier);
+            if (isResourceOfTheCollection) {
+                references.add(created.identifier);
+                applyOwnPendingChange(store, props.identifier);
+            }
 
             const {resources} = await collection.reload();
-            const createdResource = resources.find(
+            // A child is not part of the collection listing - it is found among the
+            // children of the node it went into, which is opened to show it.
+            const siblings = isResourceOfTheCollection
+                ? resources
+                : await revealChildren(parentContextPath);
+
+            const createdResource = siblings.find(
                 resource => resource.identifier === created.identifier
             );
 

@@ -1,7 +1,5 @@
-import backend from '@neos-project/neos-ui-backend-connector';
 import {selectors} from '@neos-project/neos-ui-redux-store';
 
-import {nodeTypeFilter} from '../domain/nodeTypes';
 import {EditorOptions, ResourceCreation, ResourceNode, ResourceUsage, Store} from '../types';
 
 /** Neos may live in a sub directory - derive the prefix from a known backend route. */
@@ -130,12 +128,65 @@ export const loadUsage = async (
 };
 
 
+/**
+ * The resources of the collection, with their own children nested inside them - the
+ * same request the list uses to descend, narrowed to the node types the edited
+ * property accepts.
+ */
 export const loadResources = async (
+    store: Store,
+    routes: any,
     options: EditorOptions,
     containerContextPath: string
+): Promise<ResourceNode[]> => loadChildren(store, routes, containerContextPath, {
+    nodeTypes: options.nodeTypes ?? [options.resourceCreation.type]
+});
+
+
+/**
+ * What lives below a node, several levels at a time and nested: the children, their
+ * children, and enough of the level below that to say which of those can still be
+ * unfolded.
+ */
+export const loadChildren = async (
+    store: Store,
+    routes: any,
+    parentContextPath: string,
+    options: {nodeTypes?: string[]} = {}
 ): Promise<ResourceNode[]> => {
-    const nodes = await backend.get().q(containerContextPath).find(nodeTypeFilter(options)).get();
+    const state = store.getState();
+    const nodeContextPath = state?.cr?.nodes?.documentNode
+        ?? selectors.CR.Nodes.focusedNodePathSelector(state);
 
-    return (nodes ?? []) as ResourceNode[];
+    if (typeof nodeContextPath !== 'string') {
+        return [];
+    }
+
+    const parameters = new URLSearchParams({
+        node: nodeContextPath,
+        parent: parentContextPath
+    });
+
+    if (options.nodeTypes?.length) {
+        parameters.append('nodeTypes', options.nodeTypes.join(','));
+    }
+
+    const response = await fetch(
+        `${basePathOf(routes)}/neos/service/data-source/sitegeist-resource-children`
+        + `?${parameters.toString()}`,
+        {credentials: 'include', headers: {Accept: 'application/json'}}
+    );
+
+    const body = await response.text();
+
+    if (!response.ok) {
+        throw new Error(
+            `The children of the resource could not be read (HTTP ${response.status}). `
+            + body.slice(0, 500)
+        );
+    }
+
+    const payload = JSON.parse(body);
+
+    return (payload?.data ?? payload ?? []) as ResourceNode[];
 };
-

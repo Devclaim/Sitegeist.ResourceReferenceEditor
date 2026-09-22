@@ -14,6 +14,9 @@
             <trans-unit id="action.createNew" xml:space="preserve">
                 <source>Create new</source>
             </trans-unit>
+            <trans-unit id="action.createIn" xml:space="preserve">
+                <source>In &#8220;{name}&#8221;</source>
+            </trans-unit>
             <trans-unit id="action.delete" xml:space="preserve">
                 <source>Delete</source>
             </trans-unit>
@@ -61,6 +64,9 @@
             </trans-unit>
             <trans-unit id="action.use" xml:space="preserve">
                 <source>Use</source>
+            </trans-unit>
+            <trans-unit id="action.showChildren" xml:space="preserve">
+                <source>Show contents</source>
             </trans-unit>
             <trans-unit id="error.creationBlocked" xml:space="preserve">
                 <source>{type} cannot be created here: {properties} must be provided on creation. Give these properties a default value, make them nullable, or promote them to the creation dialog (showInCreationDialog).</source>

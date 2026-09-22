@@ -57,3 +57,13 @@
     nodeCreationHandlers:
       promotedElements:
         factoryClassName: 'Neos\Neos\Ui\Infrastructure\ContentRepository\CreationDialog\PromotedElementsCreationHandlerFactory'
+
+  #
+  # A resource holds nothing unless its own node type says so, and what it says has
+  # to be a resource as well - with OPGM that is a child relation whose item type
+  # implements the Resource interface. Without this, a node type that declares no
+  # children at all would accept every content element in the installation.
+  #
+  constraints:
+    nodeTypes:
+      '*': false

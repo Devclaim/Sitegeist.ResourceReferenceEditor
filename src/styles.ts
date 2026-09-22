@@ -102,12 +102,13 @@ export const styles = `
         flex-direction: column;
     }
     .sitegeist-resource-reference-editor__item {
+        position: relative;
         display: flex;
         align-items: center;
         gap: 12px;
-        width: 100%;
         min-height: 56px;
         padding: 10px 12px;
+        gap: 10px;
         border: 0;
         border-bottom: 1px solid var(--colors-ContrastDark, #3f3f3f);
         text-align: left;
@@ -118,6 +119,13 @@ export const styles = `
     }
     .sitegeist-resource-reference-editor__item:last-child {
         border-bottom: 0;
+    }
+    /* A child is the same row as any other, stepped in and standing on slightly
+       darker ground - the step and the ground are what say it belongs to the row
+       above it. */
+    .sitegeist-resource-reference-editor__item--child {
+        background: #1c1c1c;
+        background: color-mix(in srgb, #000 22%, var(--colors-ContrastDarker, #222));
     }
     /*
      * Three states have to stay apart: the row under the cursor, the row open in the
@@ -185,6 +193,55 @@ export const styles = `
         align-items: center;
         gap: 8px;
         flex-shrink: 0;
+    }
+    /*
+     * The New button carries a menu as soon as there is more than one thing to
+     * create - the resource types of the collection, and the children the resource
+     * that is open allows.
+     */
+    .sitegeist-resource-reference-editor__create-menu {
+        position: relative;
+        flex-shrink: 0;
+    }
+    .sitegeist-resource-reference-editor__create-options {
+        position: absolute;
+        top: calc(100% + 4px);
+        right: 0;
+        z-index: 3;
+        min-width: 220px;
+        display: flex;
+        flex-direction: column;
+        padding: 4px 0;
+        border: 1px solid var(--colors-ContrastDark, #3f3f3f);
+        background: var(--colors-ContrastDarker, #222);
+        box-shadow: 0 8px 24px rgba(0, 0, 0, 0.45);
+    }
+    .sitegeist-resource-reference-editor__create-section:first-child {
+        margin-top: 0;
+        padding-top: 4px;
+        border-top: 0;
+    }
+    .sitegeist-resource-reference-editor__create-section {
+        padding: 8px 12px 4px;
+        margin-top: 4px;
+        border-top: 1px solid var(--colors-ContrastDark, #3f3f3f);
+        color: var(--colors-ContrastBright, #999);
+        font-size: 12px;
+    }
+    .sitegeist-resource-reference-editor__create-option {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        padding: 8px 12px;
+        border: 0;
+        background: none;
+        font: inherit;
+        color: var(--colors-ContrastBrightest, #fff);
+        text-align: left;
+        cursor: pointer;
+    }
+    .sitegeist-resource-reference-editor__create-option:hover {
+        background: var(--colors-ContrastNeutral, #323232);
     }
     /*
      * The actions live in the dialog's own footer row, next to its close button:

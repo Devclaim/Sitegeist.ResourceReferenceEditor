@@ -7,6 +7,7 @@ import {useInspectedResource} from '../hooks/useInspectedResource';
 import {useReferences} from '../hooks/useReferences';
 import {useResourceActions} from '../hooks/useResourceActions';
 import {useResourceCollection} from '../hooks/useResourceCollection';
+import {useResourceTree} from '../hooks/useResourceTree';
 import {useSecondaryInspector} from '../hooks/useSecondaryInspector';
 import {useSelection} from '../hooks/useSelection';
 import {styles} from '../styles';
@@ -30,11 +31,21 @@ export const ResourceReferenceEditor: React.FC<EditorProps & {
     const creation = props.options.resourceCreation;
     const secondary = useSecondaryInspector();
     const collection = useResourceCollection(props.options, props.neos?.routes);
-    const selection = useSelection(collection.resources);
+    const tree = useResourceTree(collection, props.neos?.routes);
+    const selection = useSelection(tree.rows.map(row => row.resource));
     const references = useReferences(props);
     const inspected = useInspectedResource(collection, secondary.close);
     const openDialog = (): void => setDialogIsOpen(true);
-    const actions = useResourceActions(props, collection, references, selection, inspected, openDialog);
+    const actions = useResourceActions(
+        props,
+        collection,
+        references,
+        selection,
+        inspected,
+        openDialog,
+        // A child was created below a node, so it is opened and read again.
+        (contextPath: string) => tree.reveal(contextPath)
+    );
 
     const showAll = async (): Promise<void> => {
         openDialog();
@@ -186,11 +197,13 @@ export const ResourceReferenceEditor: React.FC<EditorProps & {
                 isOpen={dialogIsOpen}
                 onClose={closeDialog}
                 collection={collection}
+                tree={tree}
                 inspected={inspected}
                 selection={selection}
                 references={references}
                 actions={actions}
-                createLabel={creation.buttonLabel}
+                creationType={creation.type}
+                usableNodeTypes={allowedNodeTypes}
                 renderSecondaryInspector={secondary.render}
             />
             {actions.pendingRemoval && (

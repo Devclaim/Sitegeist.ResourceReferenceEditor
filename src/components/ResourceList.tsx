@@ -1,53 +1,63 @@
 import React from 'react';
 
 import {useRegistries} from '../context/Registries';
+import {isUsableType} from '../domain/nodeTypes';
+import {TreeRow} from '../hooks/useResourceTree';
 import {ResourceNode} from '../types';
 import {ResourceListItem} from './ResourceListItem';
 
-/** The resources of the collection, as the rows the editor picks and opens. */
+/**
+ * The resources and their children as one list - the shape of the node tree in the
+ * backend, where a child sits indented below the node it belongs to.
+ */
 export const ResourceList: React.FC<{
-    resources: ResourceNode[];
+    rows: TreeRow[];
     isLoading: boolean;
     activeContextPath?: string;
     referencedIdentifiers: string[];
     isSelecting: boolean;
     selection: string[];
+    /** Node types the edited property can hold - the others get no Use control. */
+    usableNodeTypes: string[];
     onOpen: (resource: ResourceNode) => void;
     onToggleSelection: (resource: ResourceNode) => void;
     onToggleReference: (identifier: string) => void;
 }> = ({
-    resources,
+    rows,
     isLoading,
     activeContextPath,
     referencedIdentifiers,
     isSelecting,
     selection,
+    usableNodeTypes,
     onOpen,
     onToggleSelection,
     onToggleReference
 }) => {
-    const {t} = useRegistries();
+    const {nodeTypesRegistry, t} = useRegistries();
 
     return (
         <div className="sitegeist-resource-reference-editor__list">
-            {resources.length === 0 && (
+            {rows.length === 0 && (
                 <div className="sitegeist-resource-reference-editor__state">
                     {isLoading
                         ? t('list.loading', 'Loading…')
                         : t('list.empty', 'No resources found.')}
                 </div>
             )}
-            {resources.map(resource => (
+            {rows.map(row => (
                 <ResourceListItem
-                    key={resource.contextPath}
-                    resource={resource}
-                    isActive={activeContextPath === resource.contextPath}
-                    isReferenced={referencedIdentifiers.includes(resource.identifier)}
+                    key={row.resource.contextPath}
+                    resource={row.resource}
+                    depth={row.depth}
+                    isActive={activeContextPath === row.resource.contextPath}
+                    isReferenced={referencedIdentifiers.includes(row.resource.identifier)}
                     isSelecting={isSelecting}
-                    isSelected={selection.includes(resource.contextPath)}
-                    onOpen={() => onOpen(resource)}
-                    onToggleSelection={() => onToggleSelection(resource)}
-                    onToggleReference={() => onToggleReference(resource.identifier)}
+                    isSelected={selection.includes(row.resource.contextPath)}
+                    isUsable={isUsableType(nodeTypesRegistry, row.resource.nodeType, usableNodeTypes)}
+                    onOpen={() => onOpen(row.resource)}
+                    onToggleSelection={() => onToggleSelection(row.resource)}
+                    onToggleReference={() => onToggleReference(row.resource.identifier)}
                 />
             ))}
         </div>

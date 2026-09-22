@@ -2,12 +2,16 @@ import React from 'react';
 import {Button, Dialog} from '@neos-project/react-ui-components';
 
 import {useRegistries} from '../context/Registries';
+import {isUsableType, resourceChildTypesOf} from '../domain/nodeTypes';
+import {translate} from '../i18n';
 import {InspectedResource} from '../hooks/useInspectedResource';
 import {References} from '../hooks/useReferences';
 import {ResourceCollection} from '../hooks/useResourceCollection';
 import {ResourceActions} from '../hooks/useResourceActions';
+import {ResourceTree, TreeRow} from '../hooks/useResourceTree';
 import {Selection} from '../hooks/useSelection';
 import {ResourceNode} from '../types';
+import {CreateGroup, CreateOption} from './CreateMenu';
 import {ResourceActionBar} from './ResourceActionBar';
 import {ResourceInspector} from './ResourceInspector';
 import {ResourceList} from './ResourceList';
@@ -22,42 +26,90 @@ export const ResourceDialog: React.FC<{
     isOpen: boolean;
     onClose: () => void;
     collection: ResourceCollection;
+    tree: ResourceTree;
     inspected: InspectedResource;
     selection: Selection;
     references: References;
     actions: ResourceActions;
-    createLabel?: string;
+    /** The node type resources of the collection are created with. */
+    creationType: string;
+    /** Node types the edited property can hold. */
+    usableNodeTypes: string[];
     renderSecondaryInspector: (id?: string, render?: () => React.ReactNode) => void;
 }> = ({
     isOpen,
     onClose,
     collection,
+    tree,
     inspected,
     selection,
     references,
     actions,
-    createLabel,
+    creationType,
+    usableNodeTypes,
     renderSecondaryInspector
 }) => {
-    const {t} = useRegistries();
+    const {nodeTypesRegistry, i18nRegistry, t} = useRegistries();
     const [filter, setFilter] = React.useState('');
 
     const normalizedFilter = filter.trim().toLocaleLowerCase();
-    const visibleResources = normalizedFilter === ''
-        ? collection.resources
-        : collection.resources.filter(resource =>
-            (resource.label ?? '').toLocaleLowerCase().includes(normalizedFilter));
+    const visibleRows: TreeRow[] = normalizedFilter === ''
+        ? tree.rows
+        : tree.rows.filter(row =>
+            (row.resource.label ?? '').toLocaleLowerCase().includes(normalizedFilter));
+    const visibleResources = visibleRows.map(row => row.resource);
+
+    // Selecting covers every row, children included: hiding and deleting apply to
+    // all of them. Referencing does not - only what the edited property accepts can
+    // go into it, so Use works on that part of the selection and says nothing when
+    // there is none.
+    const isUsable = (resource: ResourceNode): boolean =>
+        isUsableType(nodeTypesRegistry, resource.nodeType, usableNodeTypes);
+    const usableSelection = selection.selected.filter(isUsable);
 
     // The action bar acts on what the editor is looking at: the resource open in the
     // inspector, or the selection while several are being picked.
-    const inspectedResource: ResourceNode | null = inspected.node
-        ? collection.resources.find(
-            resource => resource.contextPath === inspected.node.contextPath
-        ) ?? null
+    const inspectedRow: TreeRow | null = inspected.node
+        ? tree.rows.find(row => row.resource.contextPath === inspected.node.contextPath) ?? null
         : null;
+    const inspectedResource: ResourceNode | null = inspectedRow?.resource ?? null;
     const targets = selection.isSelecting
         ? selection.selected
         : (inspectedResource ? [inspectedResource] : []);
+
+    // The footer names what is selected, with the nodes it sits below - which is
+    // where the breadcrumb of the list used to be.
+    const selectedPath = inspectedRow
+        ? [...inspectedRow.ancestors, inspectedRow.resource].map(entry => entry.label)
+        : [];
+
+    // Everything the dialog creates comes out of the New button, and it creates it
+    // where the selection is: next to the resource that is open - which for a child
+    // means another child of the same parent, not another resource of the collection
+    // - and, below that, whatever child types the open resource itself allows.
+    const creationNodeType = nodeTypesRegistry.getNodeType(creationType);
+    const optionsIn = (resource: ResourceNode): CreateOption[] =>
+        resourceChildTypesOf(nodeTypesRegistry, i18nRegistry, resource.nodeType)
+            .map(nodeType => ({...nodeType, parentContextPath: resource.contextPath}));
+    const inLabel = (name: string): string =>
+        t('action.createIn', 'In “{name}”', {name});
+
+    const openRow = selection.isSelecting ? null : inspectedRow;
+    const parentResource = openRow?.ancestors[openRow.ancestors.length - 1] ?? null;
+    const createGroups: CreateGroup[] = [
+        // Siblings of what is open. At the top of the tree that is the collection,
+        // which needs no name above it.
+        parentResource
+            ? {label: inLabel(parentResource.label), options: optionsIn(parentResource)}
+            : {
+                options: [{
+                    nodeTypeName: creationType,
+                    label: translate(i18nRegistry, creationNodeType?.ui?.label) || creationType,
+                    icon: creationNodeType?.ui?.icon
+                }]
+            },
+        ...(openRow ? [{label: inLabel(openRow.resource.label), options: optionsIn(openRow.resource)}] : [])
+    ].filter(group => group.options.length > 0);
 
     return (
         <Dialog
@@ -74,13 +126,15 @@ export const ResourceDialog: React.FC<{
                 <ResourceActionBar
                     key="actions"
                     targets={targets}
-                    visibleResources={visibleResources}
+                    selectableResources={visibleResources}
                     selection={selection.selection}
                     isSelecting={selection.isSelecting}
                     isLoading={collection.isLoading}
                     isMultiple={references.isMultiple}
-                    selectionIsReferenced={selection.selected.length > 0
-                        && selection.selected.every(
+                    path={selectedPath}
+                    canUseSelection={usableSelection.length > 0}
+                    selectionIsReferenced={usableSelection.length > 0
+                        && usableSelection.every(
                             resource => references.referenced.includes(resource.identifier)
                         )}
                     onDuplicate={() => actions.duplicate(targets)}
@@ -88,11 +142,11 @@ export const ResourceDialog: React.FC<{
                     onDelete={() => actions.requestRemoval(targets)}
                     onSetSelection={selection.setSelection}
                     onUseSelection={() => {
-                        references.addMany(selection.selected.map(resource => resource.identifier));
+                        references.addMany(usableSelection.map(resource => resource.identifier));
                         selection.leave();
                     }}
                     onUnuseSelection={() => {
-                        references.drop(selection.selected.map(resource => resource.identifier));
+                        references.drop(usableSelection.map(resource => resource.identifier));
                         selection.leave();
                     }}
                 />,
@@ -117,8 +171,13 @@ export const ResourceDialog: React.FC<{
                         isLoading={collection.isLoading}
                         isSelecting={selection.isSelecting}
                         canSelect={visibleResources.length > 0}
-                        createLabel={createLabel}
-                        onCreate={actions.create}
+                        createGroups={createGroups}
+                        onCreate={option => actions.create(option.parentContextPath
+                            ? {
+                                parentContextPath: option.parentContextPath,
+                                nodeTypeName: option.nodeTypeName
+                            }
+                            : undefined)}
                         onEnterSelection={() => selection.enter(
                             // Carry the resource that is open over into the
                             // selection, so switching modes does not lose it.
@@ -127,7 +186,8 @@ export const ResourceDialog: React.FC<{
                         onLeaveSelection={selection.leave}
                     />
                     <ResourceList
-                        resources={visibleResources}
+                        rows={visibleRows}
+                        usableNodeTypes={usableNodeTypes}
                         isLoading={collection.isLoading}
                         activeContextPath={inspected.node?.contextPath}
                         referencedIdentifiers={references.referenced}

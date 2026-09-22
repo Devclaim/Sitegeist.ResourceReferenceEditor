@@ -17,6 +17,9 @@ export const ResourceListItem: React.FC<{
     isReferenced: boolean;
     isSelecting: boolean;
     isSelected: boolean;
+    /** False on rows the edited property cannot hold - a collection, for instance. */
+    isUsable: boolean;
+    depth: number;
     onOpen: () => void;
     onToggleSelection: () => void;
     onToggleReference: () => void;
@@ -26,6 +29,8 @@ export const ResourceListItem: React.FC<{
     isReferenced,
     isSelecting,
     isSelected,
+    isUsable,
+    depth,
     onOpen,
     onToggleSelection,
     onToggleReference
@@ -52,8 +57,12 @@ export const ResourceListItem: React.FC<{
                 'sitegeist-resource-reference-editor__item',
                 isActive && !isSelecting ? 'sitegeist-resource-reference-editor__item--active' : '',
                 isSelecting && isSelected ? 'sitegeist-resource-reference-editor__item--selected' : '',
-                isHidden(resource) ? 'sitegeist-resource-reference-editor__item--hidden' : ''
+                isHidden(resource) ? 'sitegeist-resource-reference-editor__item--hidden' : '',
+                depth > 0 ? 'sitegeist-resource-reference-editor__item--child' : ''
             ].join(' ')}
+            /* The row itself steps in, not its contents, so a child reads as a box
+               of its own rather than as a line of text that starts further right. */
+            style={depth > 0 ? {marginLeft: `${depth * 20}px`} : undefined}
             onClick={activate}
             onKeyDown={(event: React.KeyboardEvent) => {
                 if (event.key === 'Enter' || event.key === ' ') {
@@ -88,6 +97,7 @@ export const ResourceListItem: React.FC<{
                     {translate(i18nRegistry, nodeType?.ui?.label) || resource.nodeType}
                 </small>
             </div>
+
             {/* While selecting, the row keeps its badge and its button - they just
                 stop taking clicks, so a click anywhere on the row selects it. */}
             <span
@@ -109,6 +119,7 @@ export const ResourceListItem: React.FC<{
                   * use, which says so at all times and offers to undo it under the
                   * cursor.
                   */}
+                {isUsable && (
                 <button
                     type="button"
                     className={'sitegeist-resource-reference-editor__use'
@@ -131,6 +142,7 @@ export const ResourceListItem: React.FC<{
                         )
                         : <><Icon icon="plus" /> {t('action.use', 'Use')}</>}
                 </button>
+                )}
             </span>
         </div>
     );
