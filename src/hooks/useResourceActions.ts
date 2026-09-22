@@ -6,7 +6,9 @@ import {loadUsage} from '../api/endpoints';
 import {applyOwnPendingChange, forwardFeedbacks} from '../api/feedback';
 import {syncEditingWorkspace} from '../api/workspace';
 import {useRegistries} from '../context/Registries';
-import {creationDataFor} from '../domain/nodeTypes';
+import {creationElementsFor, emptyValueFor, missingCreationProperties} from '../domain/nodeTypes';
+import {CreationDialogValues, openCreationDialog} from '../api/creationDialog';
+import {applySaveHooks} from '../domain/saveHooks';
 import {RESOURCE_WORKSPACE_NAME, inWorkspace} from '../domain/workspace';
 import {EditorProps, ResourceNode, ResourceUsage} from '../types';
 import {InspectedResource} from './useInspectedResource';
@@ -15,6 +17,7 @@ import {ResourceCollection} from './useResourceCollection';
 import {Selection} from './useSelection';
 
 export type ResourceActions = {
+    /** Asks for the resource's values, then creates it. */
     create: () => Promise<void>;
     duplicate: (resources: ResourceNode[]) => Promise<void>;
     setHidden: (resources: ResourceNode[], hidden: boolean) => Promise<void>;
@@ -41,7 +44,7 @@ export const useResourceActions = (
     inspected: InspectedResource,
     openDialog: () => void
 ): ResourceActions => {
-    const {store, nodeTypesRegistry, t} = useRegistries();
+    const {store, nodeTypesRegistry, saveHooksRegistry, t} = useRegistries();
     const creation = props.options.resourceCreation;
 
     const [pendingRemoval, setPendingRemoval] = React.useState<ResourceNode[] | null>(null);
@@ -49,14 +52,16 @@ export const useResourceActions = (
         React.useState<Record<string, ResourceUsage> | null>(null);
 
     /**
-     * Creates the resource right away - like adding a content element - and opens it
-     * in the inspector. Node type default values are applied by the server.
+     * Asks for the resource's values with Neos' own node creation dialog and creates
+     * it from them. A resource type that asks for nothing is created right away.
      */
     const create = async (): Promise<void> => {
         openDialog();
         collection.setError(null);
 
-        const {data, missing} = creationDataFor(creation, nodeTypesRegistry.getNodeType(creation.type));
+        const nodeType = nodeTypesRegistry.getNodeType(creation.type);
+        const elements = creationElementsFor(nodeType);
+        const missing = missingCreationProperties(creation, elements);
 
         if (missing.length > 0) {
             collection.setError(t(
@@ -68,6 +73,44 @@ export const useResourceActions = (
             ));
 
             return;
+        }
+
+        if (elements.length === 0) {
+            await confirmCreation({});
+
+            return;
+        }
+
+        const container = collection.container ?? (await collection.reload()).container;
+        const values = await openCreationDialog(store, nodeType, creation.type, container.contextPath);
+
+        if (values === null) {
+            return;
+        }
+
+        await confirmCreation(values);
+    };
+
+    /**
+     * Creates the resource from what the dialog collected and opens it in the
+     * inspector. Node type default values are applied by the server.
+     */
+    const confirmCreation = async (values: CreationDialogValues): Promise<void> => {
+        const data: Record<string, unknown> = {};
+
+        // Editors may hand work over that can only run before the value is sent -
+        // the image editor creates its variant this way - so the hooks the dialog
+        // collected run here.
+        for (const [propertyName, element] of Object.entries(values)) {
+            data[propertyName] = await applySaveHooks(element.value, element.hooks, saveHooksRegistry);
+        }
+
+        // A required argument the editor left untouched is sent as an empty value of
+        // the right type: the entity rejects null, and the dialog has had its say.
+        for (const property of creation.requiredProperties ?? []) {
+            if (data[property.name] === undefined || data[property.name] === null) {
+                data[property.name] = emptyValueFor(property.type);
+            }
         }
 
         await collection.run(async () => {

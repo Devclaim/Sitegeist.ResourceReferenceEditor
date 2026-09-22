@@ -1,6 +1,7 @@
 import React from 'react';
 import manifest from '@neos-project/neos-ui-extensibility';
 
+import {watchCreationDialog} from './api/creationDialog';
 import {ResourceReferenceEditor} from './components/ResourceReferenceEditor';
 import {RegistriesProvider} from './context/Registries';
 import {EditorProps, Registry, Store} from './types';
@@ -32,6 +33,13 @@ manifest('Sitegeist.ResourceReferenceEditor', {}, (globalRegistry: Registry, {st
 
         return;
     }
+
+    // Resources are created with Neos' own node creation dialog, whose result comes
+    // back as an action - this is what listens for it.
+    globalRegistry.get('sagas')?.set(
+        'Sitegeist.ResourceReferenceEditor/CreationDialog',
+        {saga: watchCreationDialog}
+    );
 
     const registries = {
         store,

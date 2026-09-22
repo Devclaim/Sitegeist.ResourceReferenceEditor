@@ -19,7 +19,12 @@ declare module '@neos-project/neos-ui-backend-connector' {
 
 declare module '@neos-project/neos-ui-redux-store' {
     export const actions: any;
+    export const actionTypes: any;
     export const selectors: any;
+}
+
+declare module 'redux-saga/effects' {
+    export const takeEvery: any;
 }
 
 declare module '@neos-project/react-ui-components' {

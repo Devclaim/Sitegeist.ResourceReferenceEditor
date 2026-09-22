@@ -28,7 +28,8 @@ export const inspectorTabsFor = (nodeTypesRegistry: any, nodeTypeName: string): 
 
 /**
  * An empty, type correct value. Node types mapped to PHP entities reject null for
- * non-nullable constructor arguments, so a resource cannot be created without one.
+ * non-nullable constructor arguments, so a required field the editor left untouched
+ * is sent as an empty value of the right type rather than as null.
  */
 export const emptyValueFor = (type: string): unknown => {
     switch (type) {
@@ -46,40 +47,50 @@ export const emptyValueFor = (type: string): unknown => {
 
 
 /**
- * Values sent on creation only reach the node when the property is promoted to the
- * creation dialog (`showInCreationDialog`) - everything else is dropped server side.
+ * The fields a resource is created with: the node type's creation dialog elements,
+ * in the shape the inspector renders. Only properties promoted to the creation
+ * dialog (`showInCreationDialog`) end up here - values for anything else are
+ * dropped server side.
  */
-export const creationDataFor = (
+export const creationElementsFor = (nodeType: any): InspectorItem[] =>
+    Object.entries<any>(nodeType?.ui?.creationDialog?.elements ?? {})
+        .filter(([, element]) => element?.ui?.editor && element?.ui?.hidden !== true)
+        .map(([name, element]) => ({
+            type: 'editor',
+            id: name,
+            dataType: element.type,
+            label: element.ui?.label ?? name,
+            editor: element.ui.editor,
+            editorOptions: element.ui.editorOptions,
+            helpMessage: element.ui?.help,
+            defaultValue: element.defaultValue,
+            validation: element.validation
+        }));
+
+/**
+ * Required constructor arguments the creation dialog cannot ask for. Node types
+ * mapped to PHP entities cannot be constructed without them, and a node created
+ * without them breaks node label rendering - so the editor refuses instead.
+ */
+export const missingCreationProperties = (
     creation: ResourceCreation,
-    nodeType: any
-): {data: Record<string, unknown>; missing: string[]} => {
-    const elements = nodeType?.ui?.creationDialog?.elements ?? {};
-    const data: Record<string, unknown> = {};
-    const missing = [...(creation.unsupportedRequiredProperties ?? [])];
-
+    elements: InspectorItem[]
+): string[] => {
     if (!Array.isArray(creation.requiredProperties)) {
-        // The PHP side always sends this list. Without it we cannot know which
-        // properties the entity needs, and creating would produce a node that
-        // breaks node label rendering.
-        return {
-            data,
-            missing: ['(stale editor configuration - flush the Neos caches)']
-        };
+        // The PHP side always sends this list. Without it we cannot know what the
+        // entity needs, and creating would produce a node that breaks rendering.
+        return ['(stale editor configuration - flush the Neos caches)'];
     }
 
-    for (const property of creation.requiredProperties) {
-        if (!elements[property.name]) {
-            missing.push(property.name);
+    const asked = new Set(elements.map(element => element.id));
 
-            continue;
-        }
-
-        data[property.name] = emptyValueFor(property.type);
-    }
-
-    return {data, missing};
+    return [
+        ...(creation.unsupportedRequiredProperties ?? []),
+        ...creation.requiredProperties
+            .filter(property => !asked.has(property.name))
+            .map(property => property.name)
+    ];
 };
-
 
 export const declarationFor = (nodeType: any, name: string): any =>
     nodeType?.properties?.[name] ?? nodeType?.references?.[name];

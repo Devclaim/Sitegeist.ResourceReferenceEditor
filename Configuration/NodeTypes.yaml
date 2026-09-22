@@ -30,6 +30,30 @@
         label: 'Title'
         inspector:
           group: 'document'
+  # Only resources may live in a collection. A content element cannot be put here,
+  # and a resource cannot be put on a page - the two are different kinds of node.
   constraints:
     nodeTypes:
-      '*': true
+      '*': false
+      'Sitegeist.ResourceReferenceEditor:Resource': true
+
+#
+# The Resource node type itself is declared in PHP (Classes/NodeTypes/Resource.php),
+# because that is what lets an OPGM node type inherit from it. What cannot be
+# expressed there is this: Neos registers the creation dialog machinery on
+# 'Neos.Neos:Document' and 'Neos.Neos:Content' only, so a node type that is neither -
+# which a resource deliberately is not - has to ask for it.
+#
+# Without the postprocessor, `showInCreationDialog` on a property produces no
+# creation dialog element; without the creation handler, the values sent when a
+# resource is created are dropped on the way in.
+#
+'Sitegeist.ResourceReferenceEditor:Resource':
+  postprocessors:
+    'CreationDialogPostprocessor':
+      position: 'after NodeTypePresetPostprocessor'
+      postprocessor: 'Neos\Neos\Ui\Infrastructure\ContentRepository\CreationDialog\CreationDialogNodeTypePostprocessor'
+  options:
+    nodeCreationHandlers:
+      promotedElements:
+        factoryClassName: 'Neos\Neos\Ui\Infrastructure\ContentRepository\CreationDialog\PromotedElementsCreationHandlerFactory'

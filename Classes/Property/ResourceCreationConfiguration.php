@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Sitegeist\ResourceReferenceEditor\Property;
 
 use PackageFactory\OPGM\Infrastructure\NodeTypeNameExtractor;
+use Sitegeist\ResourceReferenceEditor\NodeTypes\Resource;
 
 final readonly class ResourceCreationConfiguration
 {
@@ -15,6 +16,18 @@ final readonly class ResourceCreationConfiguration
         public string $collection,
         public ?string $buttonLabel = null,
     ) {
+        // Refused here rather than at runtime: a collection only accepts resources,
+        // so creating anything else would fail on the node type constraints with an
+        // error that says nothing about the configuration that caused it.
+        if (!in_array(Resource::class, class_implements($fqn) ?: [], true)) {
+            throw new \InvalidArgumentException(sprintf(
+                '%s cannot be used as a resource: it does not implement %s. Resources '
+                . 'are not content elements - they live in the resource subtree and '
+                . 'are never rendered on a page.',
+                $fqn,
+                Resource::class,
+            ), 1758700000);
+        }
     }
 
     /**

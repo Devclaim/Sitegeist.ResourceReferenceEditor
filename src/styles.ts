@@ -323,6 +323,9 @@ export const styles = `
         color: var(--colors-ContrastBrightest, #fff);
         background: var(--colors-Warn, #ff8700);
     }
+    .sitegeist-resource-reference-editor__creation {
+        padding: 16px;
+    }
     .sitegeist-resource-reference-editor__confirmation {
         padding: 16px;
     }

@@ -19,6 +19,12 @@ final readonly class ResourceReferenceEditorConfiguration extends AbstractEditor
      */
     private const DEFAULT_ROOT_NODE_TYPE = 'Sitegeist.ResourceReferenceEditor:Root';
 
+    /**
+     * Every resource is of this type, so it is what the reference search is limited
+     * to when no node types are given.
+     */
+    private const RESOURCE_NODE_TYPE = 'Sitegeist.ResourceReferenceEditor:Resource';
+
     private ?NodeTypeNames $nodeTypes;
     private ?AbsoluteNodePath $startingPoint;
 
@@ -69,7 +75,7 @@ final readonly class ResourceReferenceEditorConfiguration extends AbstractEditor
         return [
             'editor' => 'Sitegeist.ResourceReferenceEditor/Inspector/Editors/ResourceReferenceEditor',
             'editorOptions' => array_filter([
-                'nodeTypes' => $this->nodeTypes?->toStringArray(),
+                'nodeTypes' => $this->nodeTypes?->toStringArray() ?? [self::RESOURCE_NODE_TYPE],
                 'placeholder' => $this->placeholder,
                 'startingPoint' => $this->startingPoint?->serializeToString(),
                 'threshold' => $this->threshold,

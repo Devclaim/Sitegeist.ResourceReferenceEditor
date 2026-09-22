@@ -79,6 +79,10 @@ export type Registry = {
 export type InspectorItem = {
     type: string;
     id: string;
+    /** Only on creation dialog elements: the data type and its default. */
+    dataType?: string;
+    defaultValue?: unknown;
+    validation?: Record<string, unknown>;
     label?: string;
     editor?: string;
     editorOptions?: Record<string, unknown>;
