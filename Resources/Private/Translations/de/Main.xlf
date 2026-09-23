@@ -94,6 +94,22 @@
                 <source>{type} cannot be created here: {properties} must be provided on creation. Give these properties a default value, make them nullable, or promote them to the creation dialog (showInCreationDialog).</source>
                 <target>{type} kann hier nicht angelegt werden: {properties} muss beim Anlegen angegeben werden. Diesen Eigenschaften einen Standardwert geben, sie nullable machen oder in den Erstellungsdialog aufnehmen (showInCreationDialog).</target>
             </trans-unit>
+            <trans-unit id="module.label" xml:space="preserve">
+                <source>Resources</source>
+                <target>Ressourcen</target>
+            </trans-unit>
+            <trans-unit id="module.description" xml:space="preserve">
+                <source>Manage the shared resources documents reference - authors, books and the like.</source>
+                <target>Gemeinsame Ressourcen verwalten, auf die Dokumente verweisen - Autor:innen, Bücher und Ähnliches.</target>
+            </trans-unit>
+            <trans-unit id="manager.open" xml:space="preserve">
+                <source>Resources</source>
+                <target>Ressourcen</target>
+            </trans-unit>
+            <trans-unit id="manager.empty" xml:space="preserve">
+                <source>No resource collections yet - a collection appears here once a property uses the resource reference editor.</source>
+                <target>Noch keine Ressourcen-Sammlungen - eine Sammlung erscheint hier, sobald eine Eigenschaft den Ressourcen-Editor verwendet.</target>
+            </trans-unit>
             <trans-unit id="error.moveFailed" xml:space="preserve">
                 <source>The resource could not be moved.</source>
                 <target>Die Ressource konnte nicht verschoben werden.</target>

@@ -1,4 +1,5 @@
 import React from 'react';
+import ReactDOM from 'react-dom';
 import {Dialog, Icon} from '@neos-project/react-ui-components';
 
 import {useRegistries} from '../context/Registries';
@@ -39,6 +40,10 @@ export const ResourceDialog: React.FC<{
     /** The open secondary editor - media browser, image cropper, link editor. */
     secondaryInspector: React.ReactNode | null;
     onCloseSecondaryInspector: () => void;
+    /** Shown above everything else - the collection tabs of the resource manager. */
+    header?: React.ReactNode;
+    /** Covers the whole backend like a module page, instead of a dialog. */
+    asPage?: boolean;
 }> = ({
     isOpen,
     onClose,
@@ -52,7 +57,9 @@ export const ResourceDialog: React.FC<{
     usableNodeTypes,
     renderSecondaryInspector,
     secondaryInspector,
-    onCloseSecondaryInspector
+    onCloseSecondaryInspector,
+    header,
+    asPage = false
 }) => {
     const {nodeTypesRegistry, i18nRegistry, t} = useRegistries();
     const [filter, setFilter] = React.useState('');
@@ -129,6 +136,171 @@ export const ResourceDialog: React.FC<{
         ...(openRow ? [{label: inLabel(openRow.resource.label), options: optionsIn(openRow.resource)}] : [])
     ].filter(group => group.options.length > 0);
 
+    const body = (
+        <>
+        {header}
+        <div className="sitegeist-resource-reference-editor__layout">
+            {/*
+              * The dialog has no footer, so its close button sits in the free
+              * corner of the inspector's tab row - where the sidebar has its
+              * own toggle - and stays in reach while a secondary editor is open.
+              */}
+            <button
+                type="button"
+                className="sitegeist-resource-reference-editor__close"
+                title={t('action.close', 'Close')}
+                aria-label={t('action.close', 'Close')}
+                onClick={onClose}
+            >
+                <Icon icon="times" />
+            </button>
+            <div className="sitegeist-resource-reference-editor__content">
+                {collection.error && (
+                    <div
+                        className={'sitegeist-resource-reference-editor__state '
+                            + 'sitegeist-resource-reference-editor__error'}
+                    >
+                        {collection.error}
+                    </div>
+                )}
+                <ResourceToolbar
+                    filter={filter}
+                    onFilter={setFilter}
+                    isLoading={collection.isLoading}
+                    isCreating={collection.activity === 'create'}
+                    isSelecting={selection.isSelecting}
+                    canSelect={visibleResources.length > 0}
+                    createGroups={createGroups}
+                    onCreate={option => actions.create(option.parentContextPath
+                        ? {
+                            parentContextPath: option.parentContextPath,
+                            nodeTypeName: option.nodeTypeName
+                        }
+                        : undefined)}
+                    onEnterSelection={() => selection.enter(
+                        // Carry the resource that is open over into the
+                        // selection, so switching modes does not lose it.
+                        inspectedResource ? [inspectedResource.contextPath] : []
+                    )}
+                    onLeaveSelection={selection.leave}
+                />
+                {/* A thin running bar above the list while an action is under way. */}
+                <div
+                    className={'sitegeist-resource-reference-editor__progress'
+                        + (collection.isLoading ? ' sitegeist-resource-reference-editor__progress--active' : '')}
+                    aria-hidden="true"
+                />
+                <ResourceList
+                    rows={visibleRows}
+                    usableNodeTypes={usableNodeTypes}
+                    isLoading={collection.isLoading}
+                    activeContextPath={inspected.node?.contextPath}
+                    referencedIdentifiers={references.referenced}
+                    isSelecting={selection.isSelecting}
+                    selection={selection.selection}
+                    onOpen={inspected.inspect}
+                    onToggleSelection={selection.toggle}
+                    onPick={resource => selection.pick(
+                        resource,
+                        // The resource that is open counts as the first one picked.
+                        inspectedResource ? [inspectedResource.contextPath] : []
+                    )}
+                    onToggleReference={references.toggle}
+                    // A filtered list shows only some of the siblings, and while
+                    // picking, a drag would fight the clicks that select.
+                    canReorder={normalizedFilter === '' && !selection.isSelecting && !collection.isLoading}
+                    onMove={actions.move}
+                />
+                {/* The actions for what the editor is looking at, under the list. */}
+                <ResourceActionBar
+                    targets={targets}
+                    selectableResources={visibleResources}
+                    selection={selection.selection}
+                    isSelecting={selection.isSelecting}
+                    isLoading={collection.isLoading}
+                    activity={collection.activity}
+                    // Copies go into the collection; hiding and deleting change
+                    // the resources themselves.
+                    canDuplicate={canManageCollection}
+                    canChangeTargets={canManageTargets}
+                    isMultiple={references.isMultiple}
+                    path={selectedPath}
+                    canUseSelection={usableSelection.length > 0}
+                    selectionIsReferenced={usableSelection.length > 0
+                        && usableSelection.every(
+                            resource => references.referenced.includes(resource.identifier)
+                        )}
+                    onDuplicate={() => actions.duplicate(targets)}
+                    onSetHidden={hidden => actions.setHidden(targets, hidden)}
+                    onDelete={() => actions.requestRemoval(targets)}
+                    onSetSelection={selection.setSelection}
+                    onUseSelection={() => {
+                        references.addMany(usableSelection.map(resource => resource.identifier));
+                        selection.leave();
+                    }}
+                    onUnuseSelection={() => {
+                        references.drop(usableSelection.map(resource => resource.identifier));
+                        selection.leave();
+                    }}
+                />
+            </div>
+            {/*
+              * Secondary editors open where the regular inspector opens them:
+              * over the area next to it, with the inspector itself staying in
+              * reach - not in a dialog of their own on top of this one.
+              */}
+            {secondaryInspector && (
+                <div className="sitegeist-resource-reference-editor__secondary">
+                    <button
+                        type="button"
+                        className="sitegeist-resource-reference-editor__secondary-close"
+                        title={t('action.close', 'Close')}
+                        onClick={onCloseSecondaryInspector}
+                    >
+                        <Icon icon="times" />
+                    </button>
+                    {secondaryInspector}
+                </div>
+            )}
+            <ResourceInspector
+                inspected={inspected}
+                isReadOnly={isReadOnly}
+                isLoading={collection.isLoading}
+                renderSecondaryInspector={renderSecondaryInspector}
+            />
+        </div>
+    </>
+    );
+
+    // Escape on the page closes an open secondary editor, as in the sidebar - the page
+    // itself is a module and stays; nor while a dialog of its own is in front of it.
+    React.useEffect(() => {
+        if (!asPage || !isOpen || !secondaryInspector) {
+            return undefined;
+        }
+
+        const onKeyDown = (event: KeyboardEvent): void => {
+            if (event.key === 'Escape' && !document.querySelector('[role="dialog"]')) {
+                onCloseSecondaryInspector();
+            }
+        };
+
+        document.addEventListener('keydown', onKeyDown);
+
+        return () => document.removeEventListener('keydown', onKeyDown);
+    }, [asPage, isOpen, secondaryInspector, onCloseSecondaryInspector]);
+
+    if (asPage) {
+        // The resource manager: the same editor, covering the whole backend like a
+        // module page instead of floating in a dialog.
+        return isOpen
+            ? ReactDOM.createPortal(
+                <div className="sitegeist-resource-reference-editor__page">{body}</div>,
+                document.body
+            )
+            : null;
+    }
+
     return (
         <Dialog
             isOpen={isOpen}
@@ -144,136 +316,7 @@ export const ResourceDialog: React.FC<{
                and the list column carries its own actions and the close button. */
             actions={[]}
         >
-            <div className="sitegeist-resource-reference-editor__layout">
-                {/*
-                  * The dialog has no footer, so its close button sits in the free
-                  * corner of the inspector's tab row - where the sidebar has its
-                  * own toggle - and stays in reach while a secondary editor is open.
-                  */}
-                <button
-                    type="button"
-                    className="sitegeist-resource-reference-editor__close"
-                    title={t('action.close', 'Close')}
-                    aria-label={t('action.close', 'Close')}
-                    onClick={onClose}
-                >
-                    <Icon icon="times" />
-                </button>
-                <div className="sitegeist-resource-reference-editor__content">
-                    {collection.error && (
-                        <div
-                            className={'sitegeist-resource-reference-editor__state '
-                                + 'sitegeist-resource-reference-editor__error'}
-                        >
-                            {collection.error}
-                        </div>
-                    )}
-                    <ResourceToolbar
-                        filter={filter}
-                        onFilter={setFilter}
-                        isLoading={collection.isLoading}
-                        isCreating={collection.activity === 'create'}
-                        isSelecting={selection.isSelecting}
-                        canSelect={visibleResources.length > 0}
-                        createGroups={createGroups}
-                        onCreate={option => actions.create(option.parentContextPath
-                            ? {
-                                parentContextPath: option.parentContextPath,
-                                nodeTypeName: option.nodeTypeName
-                            }
-                            : undefined)}
-                        onEnterSelection={() => selection.enter(
-                            // Carry the resource that is open over into the
-                            // selection, so switching modes does not lose it.
-                            inspectedResource ? [inspectedResource.contextPath] : []
-                        )}
-                        onLeaveSelection={selection.leave}
-                    />
-                    {/* A thin running bar above the list while an action is under way. */}
-                    <div
-                        className={'sitegeist-resource-reference-editor__progress'
-                            + (collection.isLoading ? ' sitegeist-resource-reference-editor__progress--active' : '')}
-                        aria-hidden="true"
-                    />
-                    <ResourceList
-                        rows={visibleRows}
-                        usableNodeTypes={usableNodeTypes}
-                        isLoading={collection.isLoading}
-                        activeContextPath={inspected.node?.contextPath}
-                        referencedIdentifiers={references.referenced}
-                        isSelecting={selection.isSelecting}
-                        selection={selection.selection}
-                        onOpen={inspected.inspect}
-                        onToggleSelection={selection.toggle}
-                        onPick={resource => selection.pick(
-                            resource,
-                            // The resource that is open counts as the first one picked.
-                            inspectedResource ? [inspectedResource.contextPath] : []
-                        )}
-                        onToggleReference={references.toggle}
-                        // A filtered list shows only some of the siblings, and while
-                        // picking, a drag would fight the clicks that select.
-                        canReorder={normalizedFilter === '' && !selection.isSelecting && !collection.isLoading}
-                        onMove={actions.move}
-                    />
-                    {/* The actions for what the editor is looking at, under the list. */}
-                    <ResourceActionBar
-                        targets={targets}
-                        selectableResources={visibleResources}
-                        selection={selection.selection}
-                        isSelecting={selection.isSelecting}
-                        isLoading={collection.isLoading}
-                        activity={collection.activity}
-                        // Copies go into the collection; hiding and deleting change
-                        // the resources themselves.
-                        canDuplicate={canManageCollection}
-                        canChangeTargets={canManageTargets}
-                        isMultiple={references.isMultiple}
-                        path={selectedPath}
-                        canUseSelection={usableSelection.length > 0}
-                        selectionIsReferenced={usableSelection.length > 0
-                            && usableSelection.every(
-                                resource => references.referenced.includes(resource.identifier)
-                            )}
-                        onDuplicate={() => actions.duplicate(targets)}
-                        onSetHidden={hidden => actions.setHidden(targets, hidden)}
-                        onDelete={() => actions.requestRemoval(targets)}
-                        onSetSelection={selection.setSelection}
-                        onUseSelection={() => {
-                            references.addMany(usableSelection.map(resource => resource.identifier));
-                            selection.leave();
-                        }}
-                        onUnuseSelection={() => {
-                            references.drop(usableSelection.map(resource => resource.identifier));
-                            selection.leave();
-                        }}
-                    />
-                </div>
-                {/*
-                  * Secondary editors open where the regular inspector opens them:
-                  * over the area next to it, with the inspector itself staying in
-                  * reach - not in a dialog of their own on top of this one.
-                  */}
-                {secondaryInspector && (
-                    <div className="sitegeist-resource-reference-editor__secondary">
-                        <button
-                            type="button"
-                            className="sitegeist-resource-reference-editor__secondary-close"
-                            title={t('action.close', 'Close')}
-                            onClick={onCloseSecondaryInspector}
-                        >
-                            <Icon icon="times" />
-                        </button>
-                        {secondaryInspector}
-                    </div>
-                )}
-                <ResourceInspector
-                    inspected={inspected}
-                    isReadOnly={isReadOnly}
-                    isLoading={collection.isLoading}
-                    renderSecondaryInspector={renderSecondaryInspector}
-                />
-            </div>
+            {body}
         </Dialog>
     );
 };

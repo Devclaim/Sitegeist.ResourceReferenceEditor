@@ -95,3 +95,17 @@ export const useReferences = (props: EditorProps): References => {
 
     return {referenced, isMultiple, add, addMany, drop, toggle};
 };
+
+
+/**
+ * For the resource manager, where no property is being edited: nothing is
+ * referenced, and there is nothing to add a reference to.
+ */
+export const NO_REFERENCES: References = {
+    referenced: [],
+    isMultiple: false,
+    add: () => undefined,
+    addMany: () => undefined,
+    drop: () => undefined,
+    toggle: () => undefined
+};

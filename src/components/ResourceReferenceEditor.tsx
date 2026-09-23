@@ -3,13 +3,8 @@ import {Button, Icon} from '@neos-project/react-ui-components';
 
 import {useRegistries} from '../context/Registries';
 import {translate} from '../i18n';
-import {useInspectedResource} from '../hooks/useInspectedResource';
 import {useReferences} from '../hooks/useReferences';
-import {useResourceActions} from '../hooks/useResourceActions';
-import {useResourceCollection} from '../hooks/useResourceCollection';
-import {useResourceTree} from '../hooks/useResourceTree';
-import {useSecondaryInspector} from '../hooks/useSecondaryInspector';
-import {useSelection} from '../hooks/useSelection';
+import {useResourceEditor} from '../hooks/useResourceEditor';
 import {styles} from '../styles';
 import {EditorProps} from '../types';
 import {DeleteConfirmationDialog} from './DeleteConfirmationDialog';
@@ -28,24 +23,10 @@ export const ResourceReferenceEditor: React.FC<EditorProps & {
     const [dialogIsOpen, setDialogIsOpen] = React.useState(false);
 
     const creation = props.options.resourceCreation;
-    const secondary = useSecondaryInspector();
-    const collection = useResourceCollection(props.options, props.neos?.routes);
-    const tree = useResourceTree(collection, props.neos?.routes);
-    const selection = useSelection(tree.rows.map(row => row.resource));
     const references = useReferences(props);
-    const inspected = useInspectedResource(collection, secondary.close);
     const openDialog = (): void => setDialogIsOpen(true);
-    const actions = useResourceActions(
-        props,
-        collection,
-        references,
-        selection,
-        inspected,
-        openDialog,
-        // A child was created below a node, so it is opened and read again.
-        (contextPath: string) => tree.reveal(contextPath),
-        tree.reorder
-    );
+    const {secondary, collection, tree, selection, inspected, actions} =
+        useResourceEditor(props, references, openDialog);
 
     // The collection is resolved right away - that is what says whether this user
     // may create resources, so the field only offers it when it would work. A

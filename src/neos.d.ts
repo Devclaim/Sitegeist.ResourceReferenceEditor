@@ -32,6 +32,7 @@ declare module '@neos-project/react-ui-components' {
     export const CheckBox: any;
     export const Dialog: any;
     export const Icon: any;
+    export const IconButton: any;
     export const Tabs: any;
     export const ToggablePanel: any;
 }

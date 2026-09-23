@@ -71,6 +71,18 @@
             <trans-unit id="error.creationBlocked" xml:space="preserve">
                 <source>{type} cannot be created here: {properties} must be provided on creation. Give these properties a default value, make them nullable, or promote them to the creation dialog (showInCreationDialog).</source>
             </trans-unit>
+            <trans-unit id="module.label" xml:space="preserve">
+                <source>Resources</source>
+            </trans-unit>
+            <trans-unit id="module.description" xml:space="preserve">
+                <source>Manage the shared resources documents reference - authors, books and the like.</source>
+            </trans-unit>
+            <trans-unit id="manager.open" xml:space="preserve">
+                <source>Resources</source>
+            </trans-unit>
+            <trans-unit id="manager.empty" xml:space="preserve">
+                <source>No resource collections yet - a collection appears here once a property uses the resource reference editor.</source>
+            </trans-unit>
             <trans-unit id="error.moveFailed" xml:space="preserve">
                 <source>The resource could not be moved.</source>
             </trans-unit>

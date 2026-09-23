@@ -1,0 +1,22 @@
+#
+# The resource manager's module address. The generic module route would render the
+# module inside a classic module page, which has none of the Neos UI's editors; this
+# route, which comes first, serves the Neos UI there instead - Neos UI's own backend
+# controller, as for the content module - and the plugin shows the resource manager
+# on it (see src/index.tsx).
+#
+# `sitegeistResourceManager` is not part of the address. Flow only builds an address
+# with a route when every such default is asked for, so Neos keeps building the
+# content module's address with its own route; only this package asks for it.
+#
+-
+  name: 'Resource manager'
+  uriPattern: 'neos/management/resources'
+  defaults:
+    '@package': 'Neos.Neos.Ui'
+    '@controller': 'Backend'
+    '@action': 'index'
+    '@format': 'html'
+    'sitegeistResourceManager': '1'
+  httpMethods: ['GET']
+  appendExceedingArguments: true

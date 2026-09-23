@@ -1,4 +1,6 @@
 #
+# Seeing the resource manager takes Module.Show, which every editor has.
+#
 # Managing resources - creating, editing, reordering, hiding and deleting them - is
 # guarded the way Neos 9 guards nodes: with an EditNodePrivilege on a subtree tag.
 # Every resource collection carries the tag, and the resources in it inherit it, so
@@ -15,12 +17,23 @@
 #           permission: GRANT
 #
 privilegeTargets:
+  # The module menu entry and the Resources button in the top bar - as
+  # Sitegeist.Taxonomy's Module.Show, granted to every editor.
+  'Neos\Neos\Security\Authorization\Privilege\ModulePrivilege':
+    'Sitegeist.ResourceReferenceEditor:Module.Show':
+      matcher: 'management/resources'
+
   'Neos\Neos\Security\Authorization\Privilege\EditNodePrivilege':
     'Sitegeist.ResourceReferenceEditor:ManageResources':
       # Sitegeist\ResourceReferenceEditor\Security\ResourcePermissions::SUBTREE_TAG
       matcher: 'sitegeist-resources'
 
 roles:
+  'Neos.Neos:AbstractEditor':
+    privileges:
+      - privilegeTarget: 'Sitegeist.ResourceReferenceEditor:Module.Show'
+        permission: GRANT
+
   'Neos.Neos:Administrator':
     privileges:
       - privilegeTarget: 'Sitegeist.ResourceReferenceEditor:ManageResources'

@@ -1,5 +1,15 @@
 Neos:
   Neos:
+    modules:
+      management:
+        submodules:
+          # Its address is served by the route in Routes.yaml, which shows the Neos UI
+          # with the resource manager on it.
+          resources:
+            label: 'Sitegeist.ResourceReferenceEditor:Main:module.label'
+            description: 'Sitegeist.ResourceReferenceEditor:Main:module.description'
+            icon: 'fas fa-box-archive'
+            controller: 'Sitegeist\ResourceReferenceEditor\Controller\ResourceModuleController'
     userInterface:
       translation:
         # Parses this package's XLIFF into the backend's xliff.json, which is what
@@ -12,6 +22,12 @@ Neos:
         javascript:
           sitegeist-resource-reference-editor:
             resource: 'resource://Sitegeist.ResourceReferenceEditor/Public/JavaScript/Plugin.js'
+  Flow:
+    mvc:
+      routes:
+        # Before Neos, whose generic module route would take the address otherwise.
+        'Sitegeist.ResourceReferenceEditor':
+          position: 'before Neos.Neos'
 
 Sitegeist:
   ResourceReferenceEditor:
