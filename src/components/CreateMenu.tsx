@@ -1,6 +1,8 @@
 import React from 'react';
 import {Button, Icon} from '@neos-project/react-ui-components';
 
+import {ActionIcon} from './ActionIcon';
+
 import {useRegistries} from '../context/Registries';
 
 /** One entry of the create menu: what would be created, and where it would go. */
@@ -27,8 +29,10 @@ export type CreateGroup = {
 export const CreateMenu: React.FC<{
     groups: CreateGroup[];
     isDisabled: boolean;
+    /** Shows a spinner on the button while a resource is being created. */
+    isBusy?: boolean;
     onCreate: (option: CreateOption) => void;
-}> = ({groups, isDisabled, onCreate}) => {
+}> = ({groups, isDisabled, isBusy, onCreate}) => {
     const {t} = useRegistries();
     const [isOpen, setIsOpen] = React.useState(false);
     const element = React.useRef<HTMLDivElement | null>(null);
@@ -88,7 +92,7 @@ export const CreateMenu: React.FC<{
                 title={options[0]?.label}
                 onClick={() => options[0] && choose(options[0])}
             >
-                <Icon icon="plus" /> {t('action.new', 'New')}
+                <ActionIcon icon="plus" isBusy={isBusy} /> {t('action.new', 'New')}
             </Button>
         );
     }
@@ -103,7 +107,7 @@ export const CreateMenu: React.FC<{
                 aria-expanded={isOpen}
                 onClick={() => setIsOpen(open => !open)}
             >
-                <Icon icon="plus" /> {t('action.new', 'New')}
+                <ActionIcon icon="plus" isBusy={isBusy} /> {t('action.new', 'New')}
             </Button>
             {isOpen && (
                 <div className="sitegeist-resource-reference-editor__create-options" role="menu">

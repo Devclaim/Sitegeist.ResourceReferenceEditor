@@ -54,3 +54,21 @@ export const forwardFeedbacks = (store: Store, response: any): void => {
     }
 };
 
+
+/**
+ * The node the server rendered after a change, taken from the same response the
+ * change endpoint already returned. The endpoint answers every property or
+ * creation change with a `Neos.Neos.Ui:UpdateNodeInfo` feedback carrying the fully
+ * rendered node - the same information a fresh read would give, so a caller that
+ * needs the authoritative value after a save (a save hook can alter it beyond what
+ * was sent, the way the image editor creates a variant) can read it here instead
+ * of asking the server again.
+ */
+export const nodeFromFeedback = (response: any, contextPath: string): any | null => {
+    const feedback = (response?.feedbacks ?? []).find(
+        (candidate: any) => candidate?.type === 'Neos.Neos.Ui:UpdateNodeInfo'
+    );
+
+    return feedback?.payload?.byContextPath?.[contextPath] ?? null;
+};
+

@@ -69,6 +69,7 @@ export const styles = `
         display: none;
     }
     .sitegeist-resource-reference-editor__layout {
+        position: relative;
         flex: 1;
         min-height: 0;
         display: flex;
@@ -84,15 +85,37 @@ export const styles = `
         overflow: hidden;
         background: var(--colors-ContrastDarkest, #141414);
     }
+    /*
+     * The filter looks and behaves like Neos' own TextInput: no border, the neutral
+     * fill, and on focus no outline or glow - it turns white with dark text, the
+     * way every field in the inspector does.
+     */
     .sitegeist-resource-reference-editor__search {
         flex: 1;
         min-width: 0;
         box-sizing: border-box;
-        border: 1px solid var(--colors-ContrastDark, #3f3f3f);
-        background: var(--colors-ContrastDarker, #222);
+        height: var(--spacing-GoldenUnit, 40px);
+        margin: 0;
+        padding: 0 14px;
+        border: 0;
+        border-radius: 2px;
+        background: var(--colors-ContrastNeutral, #323232);
         color: var(--colors-ContrastBrightest, #fff);
-        padding: 10px 12px;
-        font: inherit;
+        font-family: 'Noto Sans', sans-serif;
+        font-size: 14px;
+        appearance: none;
+    }
+    .sitegeist-resource-reference-editor__search:focus {
+        outline: 0;
+        box-shadow: none;
+        background: var(--colors-ContrastBrightest, #fff);
+        color: var(--colors-ContrastDarkest, #141414);
+    }
+    .sitegeist-resource-reference-editor__search::placeholder {
+        color: var(--colors-ContrastBright, #999);
+    }
+    .sitegeist-resource-reference-editor__search::-webkit-search-cancel-button {
+        display: none;
     }
     .sitegeist-resource-reference-editor__list {
         flex: 1;
@@ -126,6 +149,23 @@ export const styles = `
     .sitegeist-resource-reference-editor__item--child {
         background: #1c1c1c;
         background: color-mix(in srgb, #000 22%, var(--colors-ContrastDarker, #222));
+    }
+    /*
+     * The line from a node down along its children. It covers the row's border as
+     * well, so the lines of consecutive children join up; on the last child it stops
+     * a little short of the bottom, so it reads as ending with that child.
+     */
+    .sitegeist-resource-reference-editor__guide {
+        position: absolute;
+        top: 0;
+        bottom: -1px;
+        width: 1px;
+        margin-left: -0.5px;
+        background: var(--colors-ContrastDark, #3f3f3f);
+        pointer-events: none;
+    }
+    .sitegeist-resource-reference-editor__guide--end {
+        bottom: 10%;
     }
     /*
      * Three states have to stay apart: the row under the cursor, the row open in the
@@ -244,33 +284,34 @@ export const styles = `
         background: var(--colors-ContrastNeutral, #323232);
     }
     /*
-     * The actions live in the dialog's own footer row, next to its close button:
-     * Neos lays that row out right aligned, so it is turned into a flex
-     * row and our entry - the first one - is given the free space on the left.
+     * The dialog's close button, in the top right corner over the inspector. It is
+     * exactly as high as the tab row next to it - a tab is a 1px top border and a
+     * GoldenUnit high button, the row adds a 1px bottom border - and as wide, so it
+     * stays square; its bottom border continues the row's.
      */
-    div:has(> .dialog__body > .sitegeist-resource-reference-editor__layout)
-        > div:last-child {
-        display: flex;
-        align-items: center;
-        gap: 8px;
-        /* The row sits on the edge of the dialog otherwise. */
-        padding: 0 16px 16px;
+    .sitegeist-resource-reference-editor__close {
+        --sitegeist-resource-tab-row: calc(var(--spacing-GoldenUnit, 40px) + 2px);
+        position: absolute;
+        top: 0;
+        right: 0;
+        z-index: 4;
+        box-sizing: border-box;
+        width: var(--sitegeist-resource-tab-row);
+        height: var(--sitegeist-resource-tab-row);
+        padding: 0;
+        border: 0;
+        border-left: 1px solid var(--colors-ContrastDark, #3f3f3f);
+        border-bottom: 1px solid var(--colors-ContrastDark, #3f3f3f);
+        background: var(--colors-ContrastDarkest, #141414);
+        color: var(--colors-ContrastBrightest, #fff);
+        font-size: 16px;
+        cursor: pointer;
     }
-    /*
-     * Our entry is held to the width of the list column, so the actions line up
-     * under the list and the dialog's close button stays under the inspector.
-     */
-    div:has(> .dialog__body > .sitegeist-resource-reference-editor__layout)
-        > div:last-child > span:first-child {
-        flex: 1;
-        min-width: 0;
-        max-width: calc(100% - var(--size-SidebarWidth, 320px));
-    }
-    div:has(> .dialog__body > .sitegeist-resource-reference-editor__layout)
-        > div:last-child > span:last-child {
-        margin-left: auto;
+    .sitegeist-resource-reference-editor__close:hover {
+        background: var(--colors-PrimaryBlue, #00adee);
     }
     .sitegeist-resource-reference-editor__footer {
+        flex-shrink: 0;
         display: flex;
         align-items: center;
         justify-content: space-between;
@@ -431,6 +472,16 @@ export const styles = `
     .sitegeist-resource-reference-editor__inspector-footer > * {
         flex: 1;
     }
+    /* As rightSideBar__section and propertyGroupLabel in the regular inspector. */
+    .sitegeist-resource-reference-editor__group {
+        border-bottom: 1px solid var(--colors-ContrastDark, #3f3f3f);
+    }
+    .sitegeist-resource-reference-editor__group-label {
+        width: 100%;
+        overflow-x: hidden;
+        text-overflow: ellipsis;
+        padding: 0 var(--spacing-GoldenUnit, 40px) 0 var(--spacing-Full, 16px);
+    }
     .sitegeist-resource-reference-editor__group-icon {
         width: 2em;
         display: inline-block;
@@ -441,15 +492,43 @@ export const styles = `
         padding-bottom: var(--spacing-Full, 16px);
     }
     /*
-     * Secondary editors (media browser, image cropper) are rendered the way the
-     * regular secondary inspector renders them: the media browser is an absolutely
-     * positioned, full size iframe, so it needs a positioned box with a real height.
+     * Secondary editors (media browser, image cropper, link editor) cover the list
+     * and leave the inspector next to them free, the way the regular secondary
+     * inspector covers the content canvas. The box is positioned and sized, because
+     * the media browser is an absolutely positioned, full size iframe - and it is
+     * the only thing that scrolls, so there is one scrollbar, not one per layer.
      */
     .sitegeist-resource-reference-editor__secondary {
-        position: relative;
-        height: 75vh;
+        position: absolute;
+        top: 0;
+        bottom: 0;
+        left: 0;
+        right: var(--size-SidebarWidth, 320px);
+        z-index: 2;
         overflow: auto;
         background: var(--colors-ContrastDarker, #222);
+        border-right: 1px solid var(--colors-ContrastDark, #3f3f3f);
+    }
+    /* As the close button of the regular secondary inspector. */
+    .sitegeist-resource-reference-editor__secondary-close {
+        position: sticky;
+        top: 0;
+        float: right;
+        z-index: 3;
+        width: 40px;
+        height: 40px;
+        margin-bottom: -40px;
+        padding: 0;
+        border: 0;
+        border-left: 1px solid var(--colors-ContrastDark, #3f3f3f);
+        border-bottom: 1px solid var(--colors-ContrastDark, #3f3f3f);
+        background: var(--colors-ContrastDark, #3f3f3f);
+        color: var(--colors-ContrastBrightest, #fff);
+        font-size: 18px;
+        cursor: pointer;
+    }
+    .sitegeist-resource-reference-editor__secondary-close:hover {
+        background: var(--colors-PrimaryBlue, #00adee);
     }
     .sitegeist-resource-reference-editor__state {
         padding: 24px;
@@ -458,6 +537,42 @@ export const styles = `
     }
     .sitegeist-resource-reference-editor__error {
         color: var(--colors-Error, #ff460d);
+    }
+    /* The icon of the button whose action is running. */
+    .sitegeist-resource-reference-editor__spinner {
+        animation: sitegeist-resource-reference-editor-spin 0.8s linear infinite;
+    }
+    @keyframes sitegeist-resource-reference-editor-spin {
+        to { transform: rotate(360deg); }
+    }
+    /*
+     * The running bar above the list. It always takes its 2px, so the list does not
+     * jump when it appears, and it only fades in after a moment - an action that is
+     * done right away shows no bar at all instead of a flash.
+     */
+    .sitegeist-resource-reference-editor__progress {
+        position: relative;
+        height: 2px;
+        overflow: hidden;
+        opacity: 0;
+        transition: opacity 0.15s;
+    }
+    .sitegeist-resource-reference-editor__progress--active {
+        opacity: 1;
+        transition-delay: 0.2s;
+    }
+    .sitegeist-resource-reference-editor__progress--active::before {
+        content: "";
+        position: absolute;
+        top: 0;
+        bottom: 0;
+        width: 30%;
+        background: var(--colors-PrimaryBlue, #00adee);
+        animation: sitegeist-resource-reference-editor-progress 1s ease-in-out infinite;
+    }
+    @keyframes sitegeist-resource-reference-editor-progress {
+        from { left: -30%; }
+        to { left: 100%; }
     }
 `;
 

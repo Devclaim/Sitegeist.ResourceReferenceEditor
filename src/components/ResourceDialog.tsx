@@ -1,5 +1,5 @@
 import React from 'react';
-import {Button, Dialog} from '@neos-project/react-ui-components';
+import {Dialog, Icon} from '@neos-project/react-ui-components';
 
 import {useRegistries} from '../context/Registries';
 import {isUsableType, resourceChildTypesOf} from '../domain/nodeTypes';
@@ -36,6 +36,9 @@ export const ResourceDialog: React.FC<{
     /** Node types the edited property can hold. */
     usableNodeTypes: string[];
     renderSecondaryInspector: (id?: string, render?: () => React.ReactNode) => void;
+    /** The open secondary editor - media browser, image cropper, link editor. */
+    secondaryInspector: React.ReactNode | null;
+    onCloseSecondaryInspector: () => void;
 }> = ({
     isOpen,
     onClose,
@@ -47,7 +50,9 @@ export const ResourceDialog: React.FC<{
     actions,
     creationType,
     usableNodeTypes,
-    renderSecondaryInspector
+    renderSecondaryInspector,
+    secondaryInspector,
+    onCloseSecondaryInspector
 }) => {
     const {nodeTypesRegistry, i18nRegistry, t} = useRegistries();
     const [filter, setFilter] = React.useState('');
@@ -119,43 +124,28 @@ export const ResourceDialog: React.FC<{
             title=""
 
             style="jumbo"
-            onRequestClose={onClose}
-            /* The resource actions share the dialog's own footer row, so they sit
-               as far out of the way as the close button next to them. */
-            actions={[
-                <ResourceActionBar
-                    key="actions"
-                    targets={targets}
-                    selectableResources={visibleResources}
-                    selection={selection.selection}
-                    isSelecting={selection.isSelecting}
-                    isLoading={collection.isLoading}
-                    isMultiple={references.isMultiple}
-                    path={selectedPath}
-                    canUseSelection={usableSelection.length > 0}
-                    selectionIsReferenced={usableSelection.length > 0
-                        && usableSelection.every(
-                            resource => references.referenced.includes(resource.identifier)
-                        )}
-                    onDuplicate={() => actions.duplicate(targets)}
-                    onSetHidden={hidden => actions.setHidden(targets, hidden)}
-                    onDelete={() => actions.requestRemoval(targets)}
-                    onSetSelection={selection.setSelection}
-                    onUseSelection={() => {
-                        references.addMany(usableSelection.map(resource => resource.identifier));
-                        selection.leave();
-                    }}
-                    onUnuseSelection={() => {
-                        references.drop(usableSelection.map(resource => resource.identifier));
-                        selection.leave();
-                    }}
-                />,
-                <Button key="close" type="button" onClick={onClose}>
-                    {t('action.close', 'Close')}
-                </Button>
-            ]}
+            /* Escape closes an open secondary editor first, as it does in the
+               sidebar, rather than the whole dialog under it. */
+            onRequestClose={secondaryInspector ? onCloseSecondaryInspector : onClose}
+            /* No footer row: the inspector runs down to the bottom of the dialog,
+               and the list column carries its own actions and the close button. */
+            actions={[]}
         >
             <div className="sitegeist-resource-reference-editor__layout">
+                {/*
+                  * The dialog has no footer, so its close button sits in the free
+                  * corner of the inspector's tab row - where the sidebar has its
+                  * own toggle - and stays in reach while a secondary editor is open.
+                  */}
+                <button
+                    type="button"
+                    className="sitegeist-resource-reference-editor__close"
+                    title={t('action.close', 'Close')}
+                    aria-label={t('action.close', 'Close')}
+                    onClick={onClose}
+                >
+                    <Icon icon="times" />
+                </button>
                 <div className="sitegeist-resource-reference-editor__content">
                     {collection.error && (
                         <div
@@ -169,6 +159,7 @@ export const ResourceDialog: React.FC<{
                         filter={filter}
                         onFilter={setFilter}
                         isLoading={collection.isLoading}
+                        isCreating={collection.activity === 'create'}
                         isSelecting={selection.isSelecting}
                         canSelect={visibleResources.length > 0}
                         createGroups={createGroups}
@@ -185,6 +176,12 @@ export const ResourceDialog: React.FC<{
                         )}
                         onLeaveSelection={selection.leave}
                     />
+                    {/* A thin running bar above the list while an action is under way. */}
+                    <div
+                        className={'sitegeist-resource-reference-editor__progress'
+                            + (collection.isLoading ? ' sitegeist-resource-reference-editor__progress--active' : '')}
+                        aria-hidden="true"
+                    />
                     <ResourceList
                         rows={visibleRows}
                         usableNodeTypes={usableNodeTypes}
@@ -195,9 +192,60 @@ export const ResourceDialog: React.FC<{
                         selection={selection.selection}
                         onOpen={inspected.inspect}
                         onToggleSelection={selection.toggle}
+                        onPick={resource => selection.pick(
+                            resource,
+                            // The resource that is open counts as the first one picked.
+                            inspectedResource ? [inspectedResource.contextPath] : []
+                        )}
                         onToggleReference={references.toggle}
                     />
+                    {/* The actions for what the editor is looking at, under the list. */}
+                    <ResourceActionBar
+                        targets={targets}
+                        selectableResources={visibleResources}
+                        selection={selection.selection}
+                        isSelecting={selection.isSelecting}
+                        isLoading={collection.isLoading}
+                        activity={collection.activity}
+                        isMultiple={references.isMultiple}
+                        path={selectedPath}
+                        canUseSelection={usableSelection.length > 0}
+                        selectionIsReferenced={usableSelection.length > 0
+                            && usableSelection.every(
+                                resource => references.referenced.includes(resource.identifier)
+                            )}
+                        onDuplicate={() => actions.duplicate(targets)}
+                        onSetHidden={hidden => actions.setHidden(targets, hidden)}
+                        onDelete={() => actions.requestRemoval(targets)}
+                        onSetSelection={selection.setSelection}
+                        onUseSelection={() => {
+                            references.addMany(usableSelection.map(resource => resource.identifier));
+                            selection.leave();
+                        }}
+                        onUnuseSelection={() => {
+                            references.drop(usableSelection.map(resource => resource.identifier));
+                            selection.leave();
+                        }}
+                    />
                 </div>
+                {/*
+                  * Secondary editors open where the regular inspector opens them:
+                  * over the area next to it, with the inspector itself staying in
+                  * reach - not in a dialog of their own on top of this one.
+                  */}
+                {secondaryInspector && (
+                    <div className="sitegeist-resource-reference-editor__secondary">
+                        <button
+                            type="button"
+                            className="sitegeist-resource-reference-editor__secondary-close"
+                            title={t('action.close', 'Close')}
+                            onClick={onCloseSecondaryInspector}
+                        >
+                            <Icon icon="times" />
+                        </button>
+                        {secondaryInspector}
+                    </div>
+                )}
                 <ResourceInspector
                     inspected={inspected}
                     isLoading={collection.isLoading}

@@ -7,7 +7,16 @@ import {translate} from '../i18n';
 import {DraftValue, InspectorGroup} from '../types';
 import {PropertyField} from './PropertyField';
 
-/** One inspector group - the collapsible panel from the regular inspector. */
+/** The header theme the regular inspector gives its group headlines. */
+const headerTheme = {
+    panel__headline: 'sitegeist-resource-reference-editor__group-label' // eslint-disable-line camelcase
+};
+
+/**
+ * One inspector group - the collapsible panel from the regular inspector, with the
+ * same class names on it (as its PropertyGroup has them), so it is separated from
+ * the next group by the same line.
+ */
 export const PropertyGroup: React.FC<{
     group: InspectorGroup;
     node: any;
@@ -32,8 +41,12 @@ export const PropertyGroup: React.FC<{
     const {i18nRegistry} = useRegistries();
 
     return (
-        <ToggablePanel isOpen={isOpen} onPanelToggle={onToggle}>
-            <ToggablePanel.Header>
+        <ToggablePanel
+            isOpen={isOpen}
+            onPanelToggle={onToggle}
+            className="sitegeist-resource-reference-editor__group"
+        >
+            <ToggablePanel.Header theme={headerTheme}>
                 {group.icon && (
                     <div className="sitegeist-resource-reference-editor__group-icon">
                         <Icon icon={group.icon} />

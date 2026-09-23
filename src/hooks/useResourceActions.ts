@@ -156,22 +156,26 @@ export const useResourceActions = (
                 throw new Error(t('error.creationFailed', 'The resource could not be created.'));
             }
 
-            // The resource was created in live; the document's own workspace only
-            // sees it once it has caught up, and the reference is written there.
-            await syncEditingWorkspace(store);
-            collection.touch();
-
             if (isResourceOfTheCollection) {
+                // The resource was created in live; the document's own workspace
+                // only sees it once it has caught up, and the reference is about
+                // to be written there. A child that is not referenced does not
+                // need this - the dialog always reads resources from live itself.
+                await syncEditingWorkspace(store);
                 references.add(created.identifier);
                 applyOwnPendingChange(store, props.identifier);
             }
 
-            const {resources} = await collection.reload();
+            collection.touch();
+
             // A child is not part of the collection listing - it is found among the
-            // children of the node it went into, which is opened to show it.
-            const siblings = isResourceOfTheCollection
-                ? resources
-                : await revealChildren(parentContextPath);
+            // children of the node it went into, which is opened to show it. Both
+            // are read at the same time.
+            const [{resources}, children] = await Promise.all([
+                collection.reload(),
+                isResourceOfTheCollection ? Promise.resolve(null) : revealChildren(parentContextPath)
+            ]);
+            const siblings = children ?? resources;
 
             const createdResource = siblings.find(
                 resource => resource.identifier === created.identifier
@@ -180,7 +184,7 @@ export const useResourceActions = (
             if (createdResource) {
                 await inspected.inspect(createdResource);
             }
-        });
+        }, 'create');
     };
 
     /**
@@ -210,7 +214,9 @@ export const useResourceActions = (
                 .map((feedback: any) => feedback?.payload?.identifier)
                 .filter(Boolean);
 
-            await syncEditingWorkspace(store);
+            // Nothing here is referenced by the document and nothing on the canvas
+            // depends on it, so the personal workspace does not need to catch up
+            // with live for this - the dialog reads resources from live directly.
             collection.touch();
 
             const {resources} = await collection.reload();
@@ -223,7 +229,7 @@ export const useResourceActions = (
             if (lastCopy) {
                 await inspected.inspect(lastCopy);
             }
-        });
+        }, 'duplicate');
     };
 
     /**
@@ -246,19 +252,21 @@ export const useResourceActions = (
 
             forwardFeedbacks(store, response);
 
-            await syncEditingWorkspace(store);
-            collection.touch();
-            store.dispatch(actions.UI.ContentCanvas.reload());
-            await collection.reload();
+            // Already known - applied directly, before the workspace sync below,
+            // instead of asking the server to read the whole collection back.
+            resourcesToChange.forEach(resource => collection.patch(resource.contextPath, {hidden}));
 
-            // The visibility group of the inspector shows the same flag, so the open
-            // resource is read again instead of keeping the value it had.
+            // The visibility group of the inspector shows the same flag.
             if (inspected.node && resourcesToChange.some(
                 resource => resource.contextPath === inspected.node.contextPath
             )) {
-                await inspected.inspect(inspected.node);
+                inspected.patchProperty('_hidden', hidden);
             }
-        });
+
+            await syncEditingWorkspace(store);
+            collection.touch();
+            store.dispatch(actions.UI.ContentCanvas.reload());
+        }, 'hide');
     };
 
     const requestRemoval = async (resourcesToRemove: ResourceNode[]): Promise<void> => {
@@ -300,7 +308,6 @@ export const useResourceActions = (
             );
 
             forwardFeedbacks(store, response);
-            await syncEditingWorkspace(store);
             collection.touch();
             references.drop(resourcesToRemove.map(resource => resource.identifier));
 
@@ -316,7 +323,7 @@ export const useResourceActions = (
             }
 
             await collection.reload();
-        });
+        }, 'delete');
     };
 
     return {

@@ -77,7 +77,12 @@ export const useResourceTree = (
     const rows = build(collection.resources, 0, []);
 
     // Reading happens once per node: a request that came back empty or failed is not
-    // tried again on every render.
+    // tried again on every render. The check itself only needs to run again when the
+    // set of rows waiting to be read actually changes, not on every re-render of the
+    // editor - which, sitting inside the inspector, can happen very often for
+    // reasons that have nothing to do with this list.
+    const unreadKey = unread.join('|');
+
     React.useEffect(() => {
         const missing = unread.filter(contextPath => !requested.current.has(contextPath));
 
@@ -92,7 +97,8 @@ export const useResourceTree = (
                 await read(contextPath);
             }
         });
-    });
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [unreadKey, read]);
 
     return {
         rows,

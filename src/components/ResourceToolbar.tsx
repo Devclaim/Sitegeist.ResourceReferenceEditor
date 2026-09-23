@@ -13,6 +13,7 @@ export const ResourceToolbar: React.FC<{
     filter: string;
     onFilter: (filter: string) => void;
     isLoading: boolean;
+    isCreating: boolean;
     isSelecting: boolean;
     canSelect: boolean;
     /** What the New button offers, grouped by the node the options go into. */
@@ -24,6 +25,7 @@ export const ResourceToolbar: React.FC<{
     filter,
     onFilter,
     isLoading,
+    isCreating,
     isSelecting,
     canSelect,
     createGroups,
@@ -45,6 +47,7 @@ export const ResourceToolbar: React.FC<{
             <CreateMenu
                 groups={createGroups}
                 isDisabled={isLoading}
+                isBusy={isCreating}
                 onCreate={onCreate}
             />
             {isSelecting

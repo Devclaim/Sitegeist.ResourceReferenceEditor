@@ -11,6 +11,11 @@ export type Selection = {
     selection: string[];
     selected: ResourceNode[];
     toggle: (resource: ResourceNode) => void;
+    /**
+     * Shift+click: toggles the resource while selecting; otherwise starts
+     * selecting with the given resources and this one picked.
+     */
+    pick: (resource: ResourceNode, alreadyPicked?: string[]) => void;
     setSelection: (contextPaths: string[]) => void;
     /** Drops resources that are gone; answers whether nothing is left selected. */
     forget: (contextPaths: string[]) => void;
@@ -45,6 +50,16 @@ export const useSelection = (resources: ResourceNode[]): Selection => {
         selection,
         selected: resources.filter(resource => selection.includes(resource.contextPath)),
         toggle,
+        pick: (resource, alreadyPicked = []) => {
+            if (isSelecting) {
+                toggle(resource);
+
+                return;
+            }
+
+            setSelection([...alreadyPicked.filter(path => path !== resource.contextPath), resource.contextPath]);
+            setIsSelecting(true);
+        },
         setSelection,
         forget
     };

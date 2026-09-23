@@ -1,6 +1,9 @@
 import React from 'react';
 import {Button, Icon} from '@neos-project/react-ui-components';
 
+import {Activity} from '../hooks/useResourceCollection';
+import {ActionIcon} from './ActionIcon';
+
 import {useRegistries} from '../context/Registries';
 import {isHidden} from '../domain/resources';
 import {ResourceNode} from '../types';
@@ -18,6 +21,7 @@ export const ResourceActionBar: React.FC<{
     selection: string[];
     isSelecting: boolean;
     isLoading: boolean;
+    activity: Activity | null;
     isMultiple: boolean;
     /** False when nothing picked can be referenced at all. */
     canUseSelection: boolean;
@@ -37,6 +41,7 @@ export const ResourceActionBar: React.FC<{
     selection,
     isSelecting,
     isLoading,
+    activity,
     isMultiple,
     canUseSelection,
     selectionIsReferenced,
@@ -104,7 +109,7 @@ export const ResourceActionBar: React.FC<{
                     disabled={isLoading || !hasTargets}
                     onClick={onDuplicate}
                 >
-                    <Icon icon="clone" /> {t('action.duplicate', 'Duplicate')}
+                    <ActionIcon icon="clone" isBusy={activity === 'duplicate'} /> {t('action.duplicate', 'Duplicate')}
                 </Button>
                 <Button
                     type="button"
@@ -112,7 +117,7 @@ export const ResourceActionBar: React.FC<{
                     disabled={isLoading || !targetsCanBeHidden}
                     onClick={() => onSetHidden(!targetsAreHidden)}
                 >
-                    <Icon icon={targetsAreHidden ? 'eye' : 'eye-slash'} />
+                    <ActionIcon icon={targetsAreHidden ? 'eye' : 'eye-slash'} isBusy={activity === 'hide'} />
                     {' '}
                     {targetsAreHidden ? t('action.show', 'Show') : t('action.hide', 'Hide')}
                 </Button>
@@ -144,7 +149,7 @@ export const ResourceActionBar: React.FC<{
                     disabled={isLoading || !hasTargets}
                     onClick={onDelete}
                 >
-                    <Icon icon="trash" /> {t('action.delete', 'Delete')}
+                    <ActionIcon icon="trash" isBusy={activity === 'delete'} /> {t('action.delete', 'Delete')}
                 </Button>
             </div>
         </div>

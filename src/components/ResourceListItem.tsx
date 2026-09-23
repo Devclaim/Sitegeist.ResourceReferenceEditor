@@ -6,6 +6,12 @@ import {isHidden} from '../domain/resources';
 import {translate} from '../i18n';
 import {ResourceNode} from '../types';
 
+/** A line at one level of indentation - see `guidesOf` in ResourceList. */
+export type GuideLine = {level: number; isEnd: boolean};
+
+/** How far a child is indented per level - the guide lines sit in that gap. */
+const INDENT = 20;
+
 /**
  * One row of the resource list. Clicking it opens the resource in the inspector, or
  * picks it while the list is in selection mode; its only button puts the reference
@@ -20,8 +26,11 @@ export const ResourceListItem: React.FC<{
     /** False on rows the edited property cannot hold - a collection, for instance. */
     isUsable: boolean;
     depth: number;
+    guides: GuideLine[];
     onOpen: () => void;
     onToggleSelection: () => void;
+    /** Shift+click: picks the row, switching into selection mode if need be. */
+    onPick: () => void;
     onToggleReference: () => void;
 }> = ({
     resource,
@@ -31,8 +40,10 @@ export const ResourceListItem: React.FC<{
     isSelected,
     isUsable,
     depth,
+    guides,
     onOpen,
     onToggleSelection,
+    onPick,
     onToggleReference
 }) => {
     const {nodeTypesRegistry, i18nRegistry, t} = useRegistries();
@@ -62,8 +73,16 @@ export const ResourceListItem: React.FC<{
             ].join(' ')}
             /* The row itself steps in, not its contents, so a child reads as a box
                of its own rather than as a line of text that starts further right. */
-            style={depth > 0 ? {marginLeft: `${depth * 20}px`} : undefined}
-            onClick={activate}
+            style={depth > 0 ? {marginLeft: `${depth * INDENT}px`} : undefined}
+            /* Shift+click picks rows - the first such click switches the list into
+               selection mode. The browser's own shift+click text selection is kept
+               from highlighting the rows in between. */
+            onMouseDown={(event: React.MouseEvent) => {
+                if (event.shiftKey) {
+                    event.preventDefault();
+                }
+            }}
+            onClick={(event: React.MouseEvent) => (event.shiftKey ? onPick() : activate())}
             onKeyDown={(event: React.KeyboardEvent) => {
                 if (event.key === 'Enter' || event.key === ' ') {
                     event.preventDefault();
@@ -71,6 +90,16 @@ export const ResourceListItem: React.FC<{
                 }
             }}
         >
+            {guides.map(guide => (
+                <span
+                    key={guide.level}
+                    aria-hidden="true"
+                    className={'sitegeist-resource-reference-editor__guide'
+                        + (guide.isEnd ? ' sitegeist-resource-reference-editor__guide--end' : '')}
+                    // In the middle of the gap the child at that level is indented by.
+                    style={{left: `${-((depth - guide.level) * INDENT) - INDENT / 2}px`}}
+                />
+            ))}
             {isSelecting && (
                 <span className="sitegeist-resource-reference-editor__item-select">
                     <CheckBox isChecked={isSelected} onChange={onToggleSelection} />

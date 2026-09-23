@@ -14,7 +14,6 @@ import {styles} from '../styles';
 import {EditorProps} from '../types';
 import {DeleteConfirmationDialog} from './DeleteConfirmationDialog';
 import {ResourceDialog} from './ResourceDialog';
-import {SecondaryInspectorDialog} from './SecondaryInspectorDialog';
 
 /**
  * The editor as the inspector sees it: the regular Neos reference editor, plus the
@@ -112,7 +111,18 @@ export const ResourceReferenceEditor: React.FC<EditorProps & {
         event.stopPropagation();
 
         openDialog();
+
+        // Opened before: the resource is shown right away while the list is read
+        // again next to it, instead of after it.
+        const known = collection.resources.find(candidate => candidate.identifier === identifier);
+
         void collection.run(async () => {
+            if (known) {
+                await Promise.all([collection.reload(), inspected.inspect(known)]);
+
+                return;
+            }
+
             const {resources} = await collection.reload();
             const resource = resources.find(candidate => candidate.identifier === identifier);
 
@@ -205,6 +215,8 @@ export const ResourceReferenceEditor: React.FC<EditorProps & {
                 creationType={creation.type}
                 usableNodeTypes={allowedNodeTypes}
                 renderSecondaryInspector={secondary.render}
+                secondaryInspector={secondary.secondaryInspector?.element ?? null}
+                onCloseSecondaryInspector={secondary.close}
             />
             {actions.pendingRemoval && (
                 <DeleteConfirmationDialog
@@ -217,11 +229,6 @@ export const ResourceReferenceEditor: React.FC<EditorProps & {
                     }}
                     onConfirm={actions.remove}
                 />
-            )}
-            {secondary.secondaryInspector && (
-                <SecondaryInspectorDialog onClose={secondary.close}>
-                    {secondary.secondaryInspector.element}
-                </SecondaryInspectorDialog>
             )}
         </>
     );
