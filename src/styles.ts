@@ -143,6 +143,18 @@ export const styles = `
     .sitegeist-resource-reference-editor__item:last-child {
         border-bottom: 0;
     }
+    /*
+     * The row being dragged moves through the list with the others while the browser
+     * shows its picture under the pointer - it is marked as the gap it will fill.
+     */
+    .sitegeist-resource-reference-editor__item--dragged {
+        opacity: 0.35;
+        outline: 1px dashed var(--colors-PrimaryBlue, #00adee);
+        outline-offset: -1px;
+    }
+    .sitegeist-resource-reference-editor__item[draggable="true"]:active {
+        cursor: grabbing;
+    }
     /* A child is the same row as any other, stepped in and standing on slightly
        darker ground - the step and the ground are what say it belongs to the row
        above it. */

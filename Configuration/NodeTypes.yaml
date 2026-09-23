@@ -57,6 +57,10 @@
     nodeCreationHandlers:
       promotedElements:
         factoryClassName: 'Neos\Neos\Ui\Infrastructure\ContentRepository\CreationDialog\PromotedElementsCreationHandlerFactory'
+    # The Neos UI's move changes read this and refuse to move a node type that has
+    # none - Neos only sets it on Document and Content. A resource is shared by every
+    # language, so it keeps one order across all of them, as a document does.
+    moveNodeStrategy: gatherAll
 
   #
   # A resource holds nothing unless its own node type says so, and what it says has

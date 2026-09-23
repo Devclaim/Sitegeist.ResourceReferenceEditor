@@ -198,6 +198,10 @@ export const ResourceDialog: React.FC<{
                             inspectedResource ? [inspectedResource.contextPath] : []
                         )}
                         onToggleReference={references.toggle}
+                        // A filtered list shows only some of the siblings, and while
+                        // picking, a drag would fight the clicks that select.
+                        canReorder={normalizedFilter === '' && !selection.isSelecting && !collection.isLoading}
+                        onMove={actions.move}
                     />
                     {/* The actions for what the editor is looking at, under the list. */}
                     <ResourceActionBar

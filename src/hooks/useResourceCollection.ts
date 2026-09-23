@@ -3,11 +3,12 @@ import React from 'react';
 import {loadResources, resolveResourceContainer} from '../api/endpoints';
 import {invalidateNodeLookupCache} from '../api/nodeLookup';
 import {useRegistries} from '../context/Registries';
+import {MovePosition, withMovedDeep} from '../domain/order';
 import {messageOf} from '../domain/validation';
 import {EditorOptions, ResourceNode} from '../types';
 
 /** The action `run` is busy with - its button shows a spinner meanwhile. */
-export type Activity = 'create' | 'duplicate' | 'hide' | 'delete' | 'save';
+export type Activity = 'create' | 'duplicate' | 'hide' | 'delete' | 'save' | 'move';
 
 export type ResourceCollection = {
     /** Node address of the collection the resources live in. */
@@ -37,6 +38,8 @@ export type ResourceCollection = {
      * asking the server to read the whole collection back just to confirm it.
      */
     patch: (contextPath: string, fields: Partial<ResourceNode>) => void;
+    /** Moves a resource next to a sibling, wherever in the nested tree the two sit. */
+    reorder: (moving: string, target: string, position: MovePosition) => void;
 };
 
 /** `patch`, applied wherever the resource sits in the nested tree. */
@@ -133,6 +136,11 @@ export const useResourceCollection = (options: EditorOptions, routes: any): Reso
         patch: React.useCallback(
             (contextPath: string, fields: Partial<ResourceNode>) =>
                 setResources(current => withPatchedResource(current, contextPath, fields)),
+            []
+        ),
+        reorder: React.useCallback(
+            (moving: string, target: string, position: MovePosition) =>
+                setResources(current => withMovedDeep(current, moving, target, position)),
             []
         )
     };

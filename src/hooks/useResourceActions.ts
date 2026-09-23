@@ -8,6 +8,7 @@ import {syncEditingWorkspace} from '../api/workspace';
 import {useRegistries} from '../context/Registries';
 import {creationElementsFor, emptyValueFor, missingCreationProperties} from '../domain/nodeTypes';
 import {CreationDialogValues, openCreationDialog} from '../api/creationDialog';
+import {MovePosition} from '../domain/order';
 import {applySaveHooks} from '../domain/saveHooks';
 import {RESOURCE_WORKSPACE_NAME, inWorkspace} from '../domain/workspace';
 import {EditorProps, ResourceNode, ResourceUsage} from '../types';
@@ -30,6 +31,14 @@ export type ResourceActions = {
     /** Opens the delete warning and fills it with what references the resources. */
     requestRemoval: (resources: ResourceNode[]) => Promise<void>;
     remove: (resources: ResourceNode[]) => Promise<void>;
+    /** Moves a resource before or after one of its siblings. */
+    move: (
+        resource: ResourceNode,
+        target: ResourceNode,
+        position: MovePosition,
+        /** The node both sit below - `null` for resources of the collection itself. */
+        parentContextPath: string | null
+    ) => Promise<void>;
     cancelRemoval: () => void;
     pendingRemoval: ResourceNode[] | null;
     /** `null` while the reference counts are still being fetched. */
@@ -50,7 +59,9 @@ export const useResourceActions = (
     inspected: InspectedResource,
     openDialog: () => void,
     /** Opens a node and reads its children again, after one was created below it. */
-    revealChildren: (contextPath: string) => Promise<ResourceNode[]>
+    revealChildren: (contextPath: string) => Promise<ResourceNode[]>,
+    /** Applies a move to the children the list has read on its own. */
+    reorderChildren: (moving: string, target: string, position: MovePosition) => void
 ): ResourceActions => {
     const {store, nodeTypesRegistry, saveHooksRegistry, t} = useRegistries();
     const creation = props.options.resourceCreation;
@@ -326,8 +337,62 @@ export const useResourceActions = (
         }, 'delete');
     };
 
+    /**
+     * Reorders resources the way the content tree does - with the Neos UI's own move
+     * changes. The list shows the new order at once, and is read again only if the
+     * server refused it.
+     */
+    const move = async (
+        resource: ResourceNode,
+        target: ResourceNode,
+        position: MovePosition,
+        parentContextPath: string | null
+    ): Promise<void> => {
+        if (resource.contextPath === target.contextPath) {
+            return;
+        }
+
+        collection.reorder(resource.contextPath, target.contextPath, position);
+        reorderChildren(resource.contextPath, target.contextPath, position);
+
+        await collection.run(async () => {
+            try {
+                const response = await backend.get().endpoints.change([{
+                    type: position === 'before' ? 'Neos.Neos.Ui:MoveBefore' : 'Neos.Neos.Ui:MoveAfter',
+                    subject: inWorkspace(resource.contextPath, RESOURCE_WORKSPACE_NAME),
+                    payload: {
+                        siblingDomAddress: {
+                            contextPath: inWorkspace(target.contextPath, RESOURCE_WORKSPACE_NAME)
+                        }
+                    }
+                }]);
+
+                forwardFeedbacks(store, response);
+
+                // A move the server does not apply - a constraint of the parent, for
+                // instance - answers without an error, just without node info.
+                const wasMoved = (response?.feedbacks ?? []).some(
+                    (feedback: any) => feedback?.type === 'Neos.Neos.Ui:UpdateNodeInfo'
+                );
+
+                if (!wasMoved) {
+                    throw new Error(t('error.moveFailed', 'The resource could not be moved.'));
+                }
+            } catch (exception) {
+                // The order shown is not the stored one any more - put it back.
+                await Promise.all([
+                    collection.reload(),
+                    parentContextPath ? revealChildren(parentContextPath) : Promise.resolve([])
+                ]);
+
+                throw exception;
+            }
+        }, 'move');
+    };
+
     return {
         create,
+        move,
         duplicate,
         setHidden,
         requestRemoval,

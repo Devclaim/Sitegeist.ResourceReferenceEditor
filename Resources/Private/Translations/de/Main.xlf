@@ -94,6 +94,10 @@
                 <source>{type} cannot be created here: {properties} must be provided on creation. Give these properties a default value, make them nullable, or promote them to the creation dialog (showInCreationDialog).</source>
                 <target>{type} kann hier nicht angelegt werden: {properties} muss beim Anlegen angegeben werden. Diesen Eigenschaften einen Standardwert geben, sie nullable machen oder in den Erstellungsdialog aufnehmen (showInCreationDialog).</target>
             </trans-unit>
+            <trans-unit id="error.moveFailed" xml:space="preserve">
+                <source>The resource could not be moved.</source>
+                <target>Die Ressource konnte nicht verschoben werden.</target>
+            </trans-unit>
             <trans-unit id="error.creationFailed" xml:space="preserve">
                 <source>The resource could not be created.</source>
                 <target>Die Ressource konnte nicht angelegt werden.</target>

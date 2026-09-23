@@ -71,6 +71,9 @@
             <trans-unit id="error.creationBlocked" xml:space="preserve">
                 <source>{type} cannot be created here: {properties} must be provided on creation. Give these properties a default value, make them nullable, or promote them to the creation dialog (showInCreationDialog).</source>
             </trans-unit>
+            <trans-unit id="error.moveFailed" xml:space="preserve">
+                <source>The resource could not be moved.</source>
+            </trans-unit>
             <trans-unit id="error.creationFailed" xml:space="preserve">
                 <source>The resource could not be created.</source>
             </trans-unit>

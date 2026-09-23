@@ -2,6 +2,7 @@ import React from 'react';
 
 import {loadChildren} from '../api/endpoints';
 import {useRegistries} from '../context/Registries';
+import {MovePosition, withMoved} from '../domain/order';
 import {ResourceNode} from '../types';
 import {ResourceCollection} from './useResourceCollection';
 
@@ -20,6 +21,8 @@ export type ResourceTree = {
      * below it, so the new child is in the list.
      */
     reveal: (contextPath: string) => Promise<ResourceNode[]>;
+    /** Moves a child next to a sibling among the children read since the last reload. */
+    reorder: (moving: string, target: string, position: MovePosition) => void;
 };
 
 /**
@@ -106,6 +109,12 @@ export const useResourceTree = (
             requested.current.add(contextPath);
 
             return read(contextPath);
-        }
+        },
+        reorder: (moving, target, position) => setChildren(current => Object.fromEntries(
+            Object.entries(current).map(([parent, siblings]) => [
+                parent,
+                withMoved(siblings, moving, target, position) ?? siblings
+            ])
+        ))
     };
 };

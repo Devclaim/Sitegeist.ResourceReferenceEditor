@@ -187,6 +187,13 @@ __metadata:
   languageName: node
   linkType: hard
 
+"@formkit/auto-animate@npm:^0.8":
+  version: 0.8.4
+  resolution: "@formkit/auto-animate@npm:0.8.4"
+  checksum: f2e52d953f91ad20b752ebffb03a0991022be608ed33e72b4005d776ea6338148d37a949610b2aacdf7c04b1f932957e3c65731765577e78fa6989aa2ee087b1
+  languageName: node
+  linkType: hard
+
 "@neos-project/neos-ui-extensibility@npm:^9.1":
   version: 9.1.6
   resolution: "@neos-project/neos-ui-extensibility@npm:9.1.6"
@@ -198,6 +205,7 @@ __metadata:
   version: 0.0.0-use.local
   resolution: "@sitegeist/resource-reference-editor@workspace:."
   dependencies:
+    "@formkit/auto-animate": ^0.8
     "@neos-project/neos-ui-extensibility": ^9.1
     "@types/react": ^17.0.3
     "@types/react-dom": ^17.0.3

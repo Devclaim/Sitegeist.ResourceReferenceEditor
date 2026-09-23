@@ -32,6 +32,13 @@ export const ResourceListItem: React.FC<{
     /** Shift+click: picks the row, switching into selection mode if need be. */
     onPick: () => void;
     onToggleReference: () => void;
+    /** Whether the row can be dragged to another place among its siblings. */
+    isDraggable: boolean;
+    isDragged: boolean;
+    /** Gets where the pointer was when the drag began. */
+    onDragStart: (clientY: number) => void;
+    onDragEnd: () => void;
+    onMoveByKey: (direction: -1 | 1) => void;
 }> = ({
     resource,
     isActive,
@@ -44,7 +51,12 @@ export const ResourceListItem: React.FC<{
     onOpen,
     onToggleSelection,
     onPick,
-    onToggleReference
+    onToggleReference,
+    isDraggable,
+    isDragged,
+    onDragStart,
+    onDragEnd,
+    onMoveByKey
 }) => {
     const {nodeTypesRegistry, i18nRegistry, t} = useRegistries();
     const nodeType = nodeTypesRegistry.getNodeType(resource.nodeType);
@@ -69,8 +81,19 @@ export const ResourceListItem: React.FC<{
                 isActive && !isSelecting ? 'sitegeist-resource-reference-editor__item--active' : '',
                 isSelecting && isSelected ? 'sitegeist-resource-reference-editor__item--selected' : '',
                 isHidden(resource) ? 'sitegeist-resource-reference-editor__item--hidden' : '',
-                depth > 0 ? 'sitegeist-resource-reference-editor__item--child' : ''
+                depth > 0 ? 'sitegeist-resource-reference-editor__item--child' : '',
+                isDragged ? 'sitegeist-resource-reference-editor__item--dragged' : ''
             ].join(' ')}
+            // What the list reads to find the row the pointer is over while dragging.
+            data-context-path={resource.contextPath}
+            draggable={isDraggable}
+            onDragStart={(event: React.DragEvent) => {
+                event.dataTransfer.effectAllowed = 'move';
+                // Firefox starts no drag without data.
+                event.dataTransfer.setData('text/plain', resource.label ?? '');
+                onDragStart(event.clientY);
+            }}
+            onDragEnd={onDragEnd}
             /* The row itself steps in, not its contents, so a child reads as a box
                of its own rather than as a line of text that starts further right. */
             style={depth > 0 ? {marginLeft: `${depth * INDENT}px`} : undefined}
@@ -84,6 +107,13 @@ export const ResourceListItem: React.FC<{
             }}
             onClick={(event: React.MouseEvent) => (event.shiftKey ? onPick() : activate())}
             onKeyDown={(event: React.KeyboardEvent) => {
+                if (event.altKey && (event.key === 'ArrowUp' || event.key === 'ArrowDown')) {
+                    event.preventDefault();
+                    onMoveByKey(event.key === 'ArrowUp' ? -1 : 1);
+
+                    return;
+                }
+
                 if (event.key === 'Enter' || event.key === ' ') {
                     event.preventDefault();
                     activate();

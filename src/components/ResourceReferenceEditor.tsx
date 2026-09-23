@@ -43,7 +43,8 @@ export const ResourceReferenceEditor: React.FC<EditorProps & {
         inspected,
         openDialog,
         // A child was created below a node, so it is opened and read again.
-        (contextPath: string) => tree.reveal(contextPath)
+        (contextPath: string) => tree.reveal(contextPath),
+        tree.reorder
     );
 
     const showAll = async (): Promise<void> => {
