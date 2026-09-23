@@ -5,9 +5,11 @@ declare(strict_types=1);
 namespace Sitegeist\ResourceReferenceEditor\DataSource;
 
 use Neos\ContentRepository\Core\Projection\ContentGraph\Node;
+use Neos\ContentRepositoryRegistry\ContentRepositoryRegistry;
 use Neos\Flow\Annotations as Flow;
 use Neos\Neos\Service\DataSource\AbstractDataSource;
 use Sitegeist\ResourceReferenceEditor\Domain\ResourceCollectionService;
+use Sitegeist\ResourceReferenceEditor\Security\ResourcePermissions;
 
 /**
  * Answers with the node address of a resource collection, creating the resource
@@ -33,9 +35,15 @@ class ResourceCollectionDataSource extends AbstractDataSource
     #[Flow\Inject]
     protected ResourceCollectionService $resourceCollectionService;
 
+    #[Flow\Inject]
+    protected ContentRepositoryRegistry $contentRepositoryRegistry;
+
+    #[Flow\Inject]
+    protected ResourcePermissions $resourcePermissions;
+
     /**
      * @param array<string,mixed> $arguments
-     * @return array<string,string>
+     * @return array<string,string|bool>
      */
     public function getData(?Node $node = null, array $arguments = []): array
     {
@@ -65,9 +73,16 @@ class ResourceCollectionDataSource extends AbstractDataSource
             is_string($title) ? $title : null,
         );
 
+        // Whether the current user may create resources here, so the editor only
+        // offers New when it would succeed.
+        $collectionNode = $this->contentRepositoryRegistry->get($node->contentRepositoryId)
+            ->getContentSubgraph($nodeAddress->workspaceName, $nodeAddress->dimensionSpacePoint)
+            ->findNodeById($nodeAddress->aggregateId);
+
         return [
             'collection' => $collection,
             'contextPath' => $nodeAddress->toJson(),
+            'canManage' => $collectionNode !== null && $this->resourcePermissions->canManage($collectionNode),
         ];
     }
 }

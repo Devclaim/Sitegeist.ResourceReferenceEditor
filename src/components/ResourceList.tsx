@@ -282,7 +282,7 @@ export const ResourceList: React.FC<{
                     isSelecting={isSelecting}
                     isSelected={selection.includes(row.resource.contextPath)}
                     isUsable={isUsableType(nodeTypesRegistry, row.resource.nodeType, usableNodeTypes)}
-                    isDraggable={canReorder && !row.resource.tethered}
+                    isDraggable={canReorder && !row.resource.tethered && Boolean(row.resource.canManage)}
                     isDragged={dragged === row.resource.contextPath}
                     onDragStart={(clientY: number) => {
                         pointer.current = {y: clientY, direction: null};
@@ -293,7 +293,7 @@ export const ResourceList: React.FC<{
                     // with Escape, puts the rows back where they were.
                     onDragEnd={endDrag}
                     onMoveByKey={direction => {
-                        if (canReorder && !row.resource.tethered) {
+                        if (canReorder && !row.resource.tethered && row.resource.canManage) {
                             moveByKey(row, direction);
                         }
                     }}

@@ -15,6 +15,7 @@ use Neos\Flow\Annotations as Flow;
 use Neos\Neos\Domain\NodeLabel\NodeLabelGeneratorInterface;
 use Neos\Neos\Domain\SubtreeTagging\NeosSubtreeTag;
 use Neos\Neos\Service\DataSource\AbstractDataSource;
+use Sitegeist\ResourceReferenceEditor\Security\ResourcePermissions;
 
 /**
  * Answers with what lives below a node: the resources of a collection, or the
@@ -47,6 +48,9 @@ class ResourceChildrenDataSource extends AbstractDataSource
 
     #[Flow\Inject]
     protected NodeLabelGeneratorInterface $nodeLabelGenerator;
+
+    #[Flow\Inject]
+    protected ResourcePermissions $resourcePermissions;
 
     /**
      * @param array<string,mixed> $arguments
@@ -153,6 +157,9 @@ class ResourceChildrenDataSource extends AbstractDataSource
             'tethered' => $node->classification->isTethered(),
             'hidden' => $node->tags->withoutInherited()->contain(NeosSubtreeTag::disabled()),
             'childCount' => count($children),
+            // Whether the editor may change it (and create below it) - only for what
+            // the dialog offers; the content repository enforces it on its own.
+            'canManage' => $this->resourcePermissions->canManage($node),
         ];
 
         if ($loadedLevelsBelow >= 2) {

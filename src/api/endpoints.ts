@@ -1,6 +1,6 @@
 import {selectors} from '@neos-project/neos-ui-redux-store';
 
-import {EditorOptions, ResourceCreation, ResourceNode, ResourceUsage, Store} from '../types';
+import {EditorOptions, ResourceContainer, ResourceCreation, ResourceNode, ResourceUsage, Store} from '../types';
 
 /** Neos may live in a sub directory - derive the prefix from a known backend route. */
 export const basePathOf = (routes: any): string => {
@@ -28,7 +28,7 @@ export const resolveResourceContainer = async (
     store: Store,
     creation: ResourceCreation,
     routes: any,
-): Promise<{contextPath: string}> => {
+): Promise<ResourceContainer> => {
     const state = store.getState();
     const nodeContextPath = state?.cr?.nodes?.documentNode
         ?? selectors.CR.Nodes.focusedNodePathSelector(state);
@@ -77,7 +77,7 @@ export const resolveResourceContainer = async (
         );
     }
 
-    return {contextPath};
+    return {contextPath, canManage: Boolean(payload?.canManage ?? payload?.data?.canManage)};
 };
 
 

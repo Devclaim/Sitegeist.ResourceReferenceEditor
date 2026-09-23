@@ -22,6 +22,10 @@ export const ResourceActionBar: React.FC<{
     isSelecting: boolean;
     isLoading: boolean;
     activity: Activity | null;
+    /** Whether the user may copy resources into the collection. */
+    canDuplicate: boolean;
+    /** Whether the user may hide and delete what the actions apply to. */
+    canChangeTargets: boolean;
     isMultiple: boolean;
     /** False when nothing picked can be referenced at all. */
     canUseSelection: boolean;
@@ -42,6 +46,8 @@ export const ResourceActionBar: React.FC<{
     isSelecting,
     isLoading,
     activity,
+    canDuplicate,
+    canChangeTargets,
     isMultiple,
     canUseSelection,
     selectionIsReferenced,
@@ -103,24 +109,28 @@ export const ResourceActionBar: React.FC<{
                             : t('action.selectAll', 'Select all')}
                     </Button>
                 )}
-                <Button
-                    type="button"
-                    style="lighter"
-                    disabled={isLoading || !hasTargets}
-                    onClick={onDuplicate}
-                >
-                    <ActionIcon icon="clone" isBusy={activity === 'duplicate'} /> {t('action.duplicate', 'Duplicate')}
-                </Button>
-                <Button
-                    type="button"
-                    style="lighter"
-                    disabled={isLoading || !targetsCanBeHidden}
-                    onClick={() => onSetHidden(!targetsAreHidden)}
-                >
-                    <ActionIcon icon={targetsAreHidden ? 'eye' : 'eye-slash'} isBusy={activity === 'hide'} />
-                    {' '}
-                    {targetsAreHidden ? t('action.show', 'Show') : t('action.hide', 'Hide')}
-                </Button>
+                {canDuplicate && (
+                    <Button
+                        type="button"
+                        style="lighter"
+                        disabled={isLoading || !hasTargets}
+                        onClick={onDuplicate}
+                    >
+                        <ActionIcon icon="clone" isBusy={activity === 'duplicate'} /> {t('action.duplicate', 'Duplicate')}
+                    </Button>
+                )}
+                {canChangeTargets && (
+                    <Button
+                        type="button"
+                        style="lighter"
+                        disabled={isLoading || !targetsCanBeHidden}
+                        onClick={() => onSetHidden(!targetsAreHidden)}
+                    >
+                        <ActionIcon icon={targetsAreHidden ? 'eye' : 'eye-slash'} isBusy={activity === 'hide'} />
+                        {' '}
+                        {targetsAreHidden ? t('action.show', 'Show') : t('action.hide', 'Hide')}
+                    </Button>
+                )}
                 {/*
                   * Picking resources that are all referenced already leaves nothing
                   * to add, so the button offers the opposite instead of sitting
@@ -142,15 +152,17 @@ export const ResourceActionBar: React.FC<{
                             : <><Icon icon="check" /> {t('action.use', 'Use')}</>}
                     </Button>
                 )}
-                <Button
-                    type="button"
-                    style="error"
-                    hoverStyle="error"
-                    disabled={isLoading || !hasTargets}
-                    onClick={onDelete}
-                >
-                    <ActionIcon icon="trash" isBusy={activity === 'delete'} /> {t('action.delete', 'Delete')}
-                </Button>
+                {canChangeTargets && (
+                    <Button
+                        type="button"
+                        style="error"
+                        hoverStyle="error"
+                        disabled={isLoading || !hasTargets}
+                        onClick={onDelete}
+                    >
+                        <ActionIcon icon="trash" isBusy={activity === 'delete'} /> {t('action.delete', 'Delete')}
+                    </Button>
+                )}
             </div>
         </div>
     );

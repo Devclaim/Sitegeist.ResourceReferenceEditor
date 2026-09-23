@@ -1,0 +1,27 @@
+#
+# Managing resources - creating, editing, reordering, hiding and deleting them - is
+# guarded the way Neos 9 guards nodes: with an EditNodePrivilege on a subtree tag.
+# Every resource collection carries the tag, and the resources in it inherit it, so
+# the content repository refuses any change to a resource by a user who lacks this
+# privilege. Picking and referencing existing resources stays open to every editor.
+#
+# As in Sitegeist.Taxonomy, only administrators manage by default. Grant the target
+# to another role to hand it on, for instance to every editor:
+#
+#   roles:
+#     'Neos.Neos:Editor':
+#       privileges:
+#         - privilegeTarget: 'Sitegeist.ResourceReferenceEditor:ManageResources'
+#           permission: GRANT
+#
+privilegeTargets:
+  'Neos\Neos\Security\Authorization\Privilege\EditNodePrivilege':
+    'Sitegeist.ResourceReferenceEditor:ManageResources':
+      # Sitegeist\ResourceReferenceEditor\Security\ResourcePermissions::SUBTREE_TAG
+      matcher: 'sitegeist-resources'
+
+roles:
+  'Neos.Neos:Administrator':
+    privileges:
+      - privilegeTarget: 'Sitegeist.ResourceReferenceEditor:ManageResources'
+        permission: GRANT

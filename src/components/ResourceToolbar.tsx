@@ -44,12 +44,15 @@ export const ResourceToolbar: React.FC<{
                 placeholder={t('list.search', 'Filter resources')}
                 onChange={event => onFilter(event.currentTarget.value)}
             />
-            <CreateMenu
-                groups={createGroups}
-                isDisabled={isLoading}
-                isBusy={isCreating}
-                onCreate={onCreate}
-            />
+            {/* Nothing the user may create here: no New button at all. */}
+            {createGroups.length > 0 && (
+                <CreateMenu
+                    groups={createGroups}
+                    isDisabled={isLoading}
+                    isBusy={isCreating}
+                    onCreate={onCreate}
+                />
+            )}
             {isSelecting
                 ? (
                     <Button type="button" style="lighter" onClick={onLeaveSelection}>

@@ -25,23 +25,28 @@ export const PropertyField: React.FC<{
      */
     hooks?: Record<string, unknown> | null;
     isChanged?: boolean;
+    /** Renders the editor disabled - Neos' editors all honour `disabled`. */
+    isReadOnly?: boolean;
     onChange: (propertyName: string, value: unknown, hooks?: Record<string, unknown>) => void;
     renderSecondaryInspector: (id?: string, render?: () => React.ReactNode) => void;
     validationErrors?: React.ReactNode[];
-}> = ({item, node, value, hooks, isChanged, onChange, renderSecondaryInspector, validationErrors}) => (
+}> = ({item, node, value, hooks, isChanged, isReadOnly, onChange, renderSecondaryInspector, validationErrors}) => (
     <div className="sitegeist-resource-reference-editor__field">
         <EditorEnvelope
             identifier={item.id}
             label={item.label ?? item.id}
             editor={item.editor}
-            options={item.editorOptions}
+            options={isReadOnly ? {...(item.editorOptions ?? {}), disabled: true} : item.editorOptions}
             value={value}
             hooks={hooks ?? null}
             node={node}
             propertyName={item.id}
-            commit={(newValue: unknown, commitHooks?: Record<string, unknown>) =>
-                onChange(item.id, newValue, commitHooks)
-            }
+            commit={(newValue: unknown, commitHooks?: Record<string, unknown>) => {
+                // An editor that ignores `disabled` still cannot change anything.
+                if (!isReadOnly) {
+                    onChange(item.id, newValue, commitHooks);
+                }
+            }}
             renderSecondaryInspector={renderSecondaryInspector}
             validationErrors={validationErrors}
             helpMessage={item.helpMessage}

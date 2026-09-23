@@ -1,45 +1,29 @@
 # Sitegeist.ResourceReferenceEditor
 
-A Neos inspector editor for references to resources. It keeps
-Neos' own reference search and adds a dialog in which those resources are listed,
-created, edited, duplicated, hidden and deleted without leaving the document.
+A Neos inspector editor for referencing shared resources - authors, books, partners,
+anything a document points at. Editors pick a resource with Neos' normal reference
+search, or open a dialog to create and manage resources without leaving the page.
 
-A resource is its own kind of node, not a content element: it has no renderer and
-cannot be placed on a page. Resources are kept in their own root subtree in the
-live workspace.
+Resources are nodes of their own: they live in a separate subtree in the live
+workspace, are never rendered on a page, and are shared by every document.
 
-## Usage with OPGM
+Requires Neos 9.1 and PackageFactory.OPGM.
 
-In the node type that points at the resource, declare the reference as you would any
-other OPGM reference and add the editor configuration to it. The second argument says
-which node type the *New* button creates and which collection it lands in:
+## Features
 
-```php
-#[NodeTypeDeclaration]
-final readonly class News
-{
-    public function __construct(
-        #[ReferenceRelationDeclaration]
-        #[PropertyUiConfiguration(label: 'Autor:in')]
-        #[InspectorConfiguration(group: 'news')]
-        #[ResourceReferenceEditorConfiguration(
-            [Author::class],
-            new ResourceCreationConfiguration(
-                Author::class,
-                'authors',
-                'Neue Autor:in anlegen',
-            ),
-            'Autor:in auswählen',
-        )]
-        public ?Author $author = null,
-    ) {
-    }
-}
-```
+- Pick one or several resources in the inspector
+- Create, edit, duplicate, hide and delete them in a dialog
+- The resource's own inspector, including image cropper and media browser
+- Resources inside resources (e.g. books below an author)
+- Reorder by drag and drop or Alt+↑/↓
+- Multi select with *Select multiple* or shift+click
+- Delete warns about documents that still use the resource
+- Managing resources is limited to administrators by default
 
-`Author` is not a content element. A resource implements the package's `Resource`
-node type, which makes it a node without a renderer that can only live in a resource
-collection - a collection accepts nothing else, and no page accepts a resource:
+## Tutorial
+
+**1. Declare a resource.** Implement `Resource` and give it a label. Every required
+constructor argument must be shown in the creation dialog:
 
 ```php
 #[NodeTypeDeclaration]
@@ -50,8 +34,9 @@ final readonly class Author implements Resource
 
     public function __construct(
         #[PropertyUiConfiguration(label: 'Name', showInCreationDialog: true)]
-        #[InspectorConfiguration(group: 'author')]
         public string $name,
+        #[ChildRelationDeclaration]
+        public Books $books = new Books(), // optional: resources inside the resource
     ) {
     }
 
@@ -62,68 +47,50 @@ final readonly class Author implements Resource
 }
 ```
 
-`Resource` brings `Neos.Neos:Node` and `Neos.Neos:Hidable` - deliberately not
-`Neos.Neos:Content`, which is what would make it insertable into a page and expected
-to render itself.
-
-Type the property as a collection of resources to reference several of them; the
-editor switches to Neos' multi value reference editor by itself:
+**2. Reference it.** Add the editor to a reference. The creation configuration names
+the type *New* creates and the collection it goes into:
 
 ```php
-public Authors $authors = new Authors(),
+#[ReferenceRelationDeclaration]
+#[PropertyUiConfiguration(label: 'Autor:in')]
+#[ResourceReferenceEditorConfiguration(
+    [Author::class],
+    new ResourceCreationConfiguration(Author::class, 'authors', 'Neue Autor:in anlegen'),
+    'Autor:in auswählen',
+)]
+public ?Author $author = null,
 ```
 
-Two things a resource has to bring:
+Type the property as a collection (`public Authors $authors = new Authors()`) to
+reference several.
 
-- **A label.** The name shown in the list and in the field is the node label, which
-  `Resource` requires as `getNeosLabel()`.
-- **Everything it needs, in the creation dialog.** *New* opens Neos' own node
-  creation dialog, so every non-nullable constructor argument has to be promoted to
-  it (`showInCreationDialog: true`) - values for anything else are dropped server
-  side. The editor resolves those arguments by reflection and refuses to create -
-  naming the property - rather than producing an entity that cannot be constructed
-  and whose label rendering would throw. A resource type that asks for nothing is
-  created without a dialog.
+**3. Flush the caches.** `./flow flow:cache:flush` - the collection is created on
+first use.
 
 ### Options
 
-| Argument | Meaning |
-| --- | --- |
-| `fqns` | Node types that may be referenced. Defaults to the created type. |
-| `create` | Node type, collection and button label for *New*. |
-| `placeholder` | Placeholder of the reference search. |
-| `startingPoint` | Where the search starts. Defaults to the collection. |
-| `threshold` | Characters before the search runs. |
-| `disabled` | Renders the editor read only. |
+`ResourceReferenceEditorConfiguration($fqns, $create, $placeholder, $startingPoint, $threshold, $disabled)` -
+`$fqns: null` allows every resource type; `$startingPoint` defaults to the collection.
 
-## How it works
+## Permissions
 
-```
-/<Sitegeist.ResourceReferenceEditor:Root>/<collection>/<resource>
-```
-
-Root and collection are created on first use, in the most general dimension, so a
-collection shines through into every specialization instead of existing once per
-language. Both node types are configurable:
+Using resources is open to every editor. Managing them takes
+`Sitegeist.ResourceReferenceEditor:ManageResources`, granted to administrators. To
+allow editors:
 
 ```yaml
-Sitegeist:
-  ResourceReferenceEditor:
-    contentRepository:
-      rootNodeType: 'Sitegeist.ResourceReferenceEditor:Root'
-      collectionNodeType: 'Sitegeist.ResourceReferenceEditor:Collection'
+roles:
+  'Neos.Neos:Editor':
+    privileges:
+      - privilegeTarget: 'Sitegeist.ResourceReferenceEditor:ManageResources'
+        permission: GRANT
 ```
 
 ## Development
 
 ```bash
-yarn build                  # bundles src/ into Resources/Public/JavaScript
-node_modules/.bin/tsc -p .  # type checks; esbuild only transpiles
+yarn build   # or: yarn watch
+node_modules/.bin/tsc -p .
 ```
 
-`src/` is split into `api/` (endpoints and server feedback), `domain/` (node types,
-workspace, validation, save hooks), `context/`, `hooks/` and `components/`;
-`index.tsx` is the manifest. Strings go through the i18n registry with their English
-wording as the fallback; English and German live in
-`Resources/Private/Translations/<locale>/Main.xlf` and are registered for auto
-inclusion in `Settings.yaml`.
+Commit the built `Resources/Public/JavaScript/Plugin.js` with every change to `src/`.

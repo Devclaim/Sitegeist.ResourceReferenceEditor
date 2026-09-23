@@ -5,21 +5,26 @@ import {invalidateNodeLookupCache} from '../api/nodeLookup';
 import {useRegistries} from '../context/Registries';
 import {MovePosition, withMovedDeep} from '../domain/order';
 import {messageOf} from '../domain/validation';
-import {EditorOptions, ResourceNode} from '../types';
+import {EditorOptions, ResourceContainer, ResourceNode} from '../types';
 
 /** The action `run` is busy with - its button shows a spinner meanwhile. */
 export type Activity = 'create' | 'duplicate' | 'hide' | 'delete' | 'save' | 'move';
 
 export type ResourceCollection = {
     /** Node address of the collection the resources live in. */
-    container: {contextPath: string} | null;
+    container: ResourceContainer | null;
     resources: ResourceNode[];
     isLoading: boolean;
     activity: Activity | null;
     error: string | null;
     setError: (error: string | null) => void;
+    /**
+     * Resolves the collection without reading its resources - what the field needs
+     * up front, to know whether it may offer creating a resource at all.
+     */
+    resolve: () => Promise<ResourceContainer>;
     /** Re-reads collection and resources, and answers with what was read. */
-    reload: () => Promise<{container: {contextPath: string}; resources: ResourceNode[]}>;
+    reload: () => Promise<{container: ResourceContainer; resources: ResourceNode[]}>;
     /**
      * Counts the changes made to resources. Neos' reference editor loads the label
      * of its value once and keeps it, so it is re-keyed on this and reads the label
@@ -65,7 +70,7 @@ export const useResourceCollection = (options: EditorOptions, routes: any): Reso
     const {store, globalRegistry} = useRegistries();
     const creation = options.resourceCreation;
 
-    const [container, setContainer] = React.useState<{contextPath: string} | null>(null);
+    const [container, setContainer] = React.useState<ResourceContainer | null>(null);
     const [resources, setResources] = React.useState<ResourceNode[]>([]);
     const [isLoading, setIsLoading] = React.useState(false);
     const [activity, setActivity] = React.useState<Activity | null>(null);
@@ -75,15 +80,22 @@ export const useResourceCollection = (options: EditorOptions, routes: any): Reso
     // The collection's node address does not change while the same document is
     // edited, so it is resolved once per document instead of in front of every
     // reload - which would otherwise always be two requests in a row.
-    const resolved = React.useRef<{key: string; container: {contextPath: string}} | null>(null);
+    const resolved = React.useRef<{key: string; container: ResourceContainer} | null>(null);
 
-    const reload = React.useCallback(async () => {
+    const resolve = React.useCallback(async (): Promise<ResourceContainer> => {
         const key = `${store.getState()?.cr?.nodes?.documentNode ?? ''}|${creation.collection}`;
         const resolvedContainer = resolved.current?.key === key
             ? resolved.current.container
             : await resolveResourceContainer(store, creation, routes);
 
         resolved.current = {key, container: resolvedContainer};
+        setContainer(resolvedContainer);
+
+        return resolvedContainer;
+    }, [creation, routes, store]);
+
+    const reload = React.useCallback(async () => {
+        const resolvedContainer = await resolve();
         const loadedResources = await loadResources(
             store,
             routes,
@@ -95,7 +107,7 @@ export const useResourceCollection = (options: EditorOptions, routes: any): Reso
         setResources(loadedResources);
 
         return {container: resolvedContainer, resources: loadedResources};
-    }, [creation, options, routes, store]);
+    }, [options, resolve, routes, store]);
 
     const run = React.useCallback(async <T, >(
         action: () => Promise<T>,
@@ -123,6 +135,7 @@ export const useResourceCollection = (options: EditorOptions, routes: any): Reso
         activity,
         error,
         setError,
+        resolve,
         reload,
         run,
         version,

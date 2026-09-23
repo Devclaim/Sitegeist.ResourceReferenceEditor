@@ -13,8 +13,10 @@ import {PropertyGroup} from './PropertyGroup';
 export const ResourceInspector: React.FC<{
     inspected: InspectedResource;
     isLoading: boolean;
+    /** The user may look at the resource, not change it: editors disabled, no Apply. */
+    isReadOnly: boolean;
     renderSecondaryInspector: (id?: string, render?: () => React.ReactNode) => void;
-}> = ({inspected, isLoading, renderSecondaryInspector}) => {
+}> = ({inspected, isLoading, isReadOnly, renderSecondaryInspector}) => {
     const {i18nRegistry, t} = useRegistries();
 
     const body = (): React.ReactNode => {
@@ -52,6 +54,7 @@ export const ResourceInspector: React.FC<{
                                 draft={inspected.draft}
                                 isOpen={inspected.isPanelOpen(group.id, group.collapsed)}
                                 onToggle={() => inspected.togglePanel(group.id)}
+                                isReadOnly={isReadOnly}
                                 onChange={inspected.change}
                                 renderSecondaryInspector={renderSecondaryInspector}
                                 validationErrors={inspected.validationErrors}
@@ -68,7 +71,7 @@ export const ResourceInspector: React.FC<{
             <div className="sitegeist-resource-reference-editor__inspector-body">
                 {body()}
             </div>
-            {inspected.node && (
+            {inspected.node && !isReadOnly && (
                 <div className="sitegeist-resource-reference-editor__inspector-footer">
                     <Button
                         type="button"

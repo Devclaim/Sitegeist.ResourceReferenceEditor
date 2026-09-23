@@ -23,6 +23,7 @@ export const PropertyGroup: React.FC<{
     values: Record<string, unknown>;
     draft: Record<string, DraftValue>;
     isOpen: boolean;
+    isReadOnly: boolean;
     onToggle: () => void;
     onChange: (propertyName: string, value: unknown, hooks?: Record<string, unknown>) => void;
     renderSecondaryInspector: (id?: string, render?: () => React.ReactNode) => void;
@@ -33,6 +34,7 @@ export const PropertyGroup: React.FC<{
     values,
     draft,
     isOpen,
+    isReadOnly,
     onToggle,
     onChange,
     renderSecondaryInspector,
@@ -65,6 +67,7 @@ export const PropertyGroup: React.FC<{
                         value={item.id === '_nodeType' ? node?.nodeType : values[item.id]}
                         hooks={draft[item.id]?.hooks}
                         isChanged={Boolean(draft[item.id])}
+                        isReadOnly={isReadOnly}
                         onChange={onChange}
                         renderSecondaryInspector={renderSecondaryInspector}
                         validationErrors={validationErrors[item.id]}

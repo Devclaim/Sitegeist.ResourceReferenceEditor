@@ -93,11 +93,22 @@ export const ResourceDialog: React.FC<{
     // means another child of the same parent, not another resource of the collection
     // - and, below that, whatever child types the open resource itself allows.
     const creationNodeType = nodeTypesRegistry.getNodeType(creationType);
-    const optionsIn = (resource: ResourceNode): CreateOption[] =>
-        resourceChildTypesOf(nodeTypesRegistry, i18nRegistry, resource.nodeType)
-            .map(nodeType => ({...nodeType, parentContextPath: resource.contextPath}));
+    const optionsIn = (resource: ResourceNode): CreateOption[] => (resource.canManage
+        ? resourceChildTypesOf(nodeTypesRegistry, i18nRegistry, resource.nodeType)
+            .map(nodeType => ({...nodeType, parentContextPath: resource.contextPath}))
+        : []);
     const inLabel = (name: string): string =>
         t('action.createIn', 'In “{name}”', {name});
+
+    // What the current user may do - see ResourcePermissions. Anything else is not
+    // offered at all, rather than offered and refused.
+    const canManageCollection = collection.container?.canManage ?? false;
+    // With nothing picked yet the buttons stay for someone who may manage - disabled,
+    // as before - instead of appearing only once something is selected.
+    const canManageTargets = targets.length > 0
+        ? targets.every(target => Boolean(target.canManage))
+        : canManageCollection;
+    const isReadOnly = !inspectedResource?.canManage;
 
     const openRow = selection.isSelecting ? null : inspectedRow;
     const parentResource = openRow?.ancestors[openRow.ancestors.length - 1] ?? null;
@@ -107,11 +118,13 @@ export const ResourceDialog: React.FC<{
         parentResource
             ? {label: inLabel(parentResource.label), options: optionsIn(parentResource)}
             : {
-                options: [{
-                    nodeTypeName: creationType,
-                    label: translate(i18nRegistry, creationNodeType?.ui?.label) || creationType,
-                    icon: creationNodeType?.ui?.icon
-                }]
+                options: canManageCollection
+                    ? [{
+                        nodeTypeName: creationType,
+                        label: translate(i18nRegistry, creationNodeType?.ui?.label) || creationType,
+                        icon: creationNodeType?.ui?.icon
+                    }]
+                    : []
             },
         ...(openRow ? [{label: inLabel(openRow.resource.label), options: optionsIn(openRow.resource)}] : [])
     ].filter(group => group.options.length > 0);
@@ -211,6 +224,10 @@ export const ResourceDialog: React.FC<{
                         isSelecting={selection.isSelecting}
                         isLoading={collection.isLoading}
                         activity={collection.activity}
+                        // Copies go into the collection; hiding and deleting change
+                        // the resources themselves.
+                        canDuplicate={canManageCollection}
+                        canChangeTargets={canManageTargets}
                         isMultiple={references.isMultiple}
                         path={selectedPath}
                         canUseSelection={usableSelection.length > 0}
@@ -252,6 +269,7 @@ export const ResourceDialog: React.FC<{
                 )}
                 <ResourceInspector
                     inspected={inspected}
+                    isReadOnly={isReadOnly}
                     isLoading={collection.isLoading}
                     renderSecondaryInspector={renderSecondaryInspector}
                 />

@@ -47,6 +47,16 @@ export const ResourceReferenceEditor: React.FC<EditorProps & {
         tree.reorder
     );
 
+    // The collection is resolved right away - that is what says whether this user
+    // may create resources, so the field only offers it when it would work. A
+    // failure is left to surface when the dialog is used.
+    React.useEffect(() => {
+        collection.resolve().catch(() => undefined);
+    }, [collection.resolve]);
+
+    // Unknown until the collection is resolved: shown, but not usable yet.
+    const canCreate = collection.container?.canManage ?? null;
+
     const showAll = async (): Promise<void> => {
         openDialog();
         await collection.run(() => collection.reload());
@@ -184,17 +194,19 @@ export const ResourceReferenceEditor: React.FC<EditorProps & {
                     )}
             </div>
             <div className="sitegeist-resource-reference-editor__actions">
+                {canCreate !== false && (
                 <Button
                     className="sitegeist-resource-reference-editor__create"
                     type="button"
                     style="lighter"
-                    disabled={props.options.disabled || collection.isLoading}
+                    disabled={props.options.disabled || collection.isLoading || canCreate === null}
                     onClick={actions.create}
                     title={creation.buttonLabel ?? t('action.createNew', 'Create new')}
                     aria-label={creation.buttonLabel ?? t('action.createNew', 'Create new')}
                 >
                     <Icon icon="plus" />
                 </Button>
+                )}
                 <Button
                     type="button"
                     style="lighter"

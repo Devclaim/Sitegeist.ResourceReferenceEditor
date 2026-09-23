@@ -18,6 +18,12 @@ export type ResourceNode = {
     /** Tethered children belong to their parent and cannot be changed on their own. */
     tethered?: boolean;
     hidden?: boolean;
+    /**
+     * Whether the current user may change it and create below it - the
+     * ManageResources privilege. Only what the dialog offers depends on it; the
+     * content repository enforces the privilege by itself.
+     */
+    canManage?: boolean;
     /** How many children this node has - what makes a row descendable. */
     childCount?: number;
     /**
@@ -139,3 +145,10 @@ export type SecondaryInspector = {
     element: React.ReactNode;
 };
 
+
+/** The collection resources of a type live in. */
+export type ResourceContainer = {
+    contextPath: string;
+    /** Whether the current user may create resources in it. */
+    canManage: boolean;
+};

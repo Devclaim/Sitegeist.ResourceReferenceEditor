@@ -10,6 +10,8 @@ use Neos\ContentRepository\Core\DimensionSpace\OriginDimensionSpacePoint;
 use Neos\ContentRepository\Core\Feature\NodeCreation\Command\CreateNodeAggregateWithNode;
 use Neos\ContentRepository\Core\Feature\NodeModification\Dto\PropertyValuesToWrite;
 use Neos\ContentRepository\Core\Feature\RootNodeCreation\Command\CreateRootNodeAggregateWithNode;
+use Neos\ContentRepository\Core\Feature\SubtreeTagging\Command\TagSubtree;
+use Neos\ContentRepository\Core\SharedModel\Node\NodeVariantSelectionStrategy;
 use Neos\ContentRepository\Core\NodeType\NodeTypeName;
 use Neos\ContentRepository\Core\Projection\ContentGraph\Filter\FindSubtreeFilter;
 use Neos\ContentRepository\Core\Projection\ContentGraph\Node;
@@ -20,6 +22,8 @@ use Neos\ContentRepository\Core\SharedModel\Node\NodeName;
 use Neos\ContentRepository\Core\SharedModel\Workspace\WorkspaceName;
 use Neos\ContentRepositoryRegistry\ContentRepositoryRegistry;
 use Neos\Flow\Annotations as Flow;
+use Neos\Flow\Security\Context as SecurityContext;
+use Sitegeist\ResourceReferenceEditor\Security\ResourcePermissions;
 
 /**
  * Resolves the collections resources are stored in.
@@ -38,6 +42,12 @@ use Neos\Flow\Annotations as Flow;
  * Collections are created in the root generalization of the dimension space, so a
  * collection shines through into all specializations instead of existing per
  * language.
+ *
+ * Every collection carries the subtree tag the ManageResources privilege matches
+ * (see ResourcePermissions), and its resources inherit it. Root and collections are
+ * infrastructure the editor needs to even show the list, so they are created - and
+ * a collection from before the tag existed is tagged - regardless of whether the
+ * current user may manage resources.
  */
 #[Flow\Scope('singleton')]
 class ResourceCollectionService
@@ -50,6 +60,7 @@ class ResourceCollectionService
 
     public function __construct(
         private readonly ContentRepositoryRegistry $contentRepositoryRegistry,
+        private readonly SecurityContext $securityContext,
     ) {
     }
 
@@ -64,33 +75,14 @@ class ResourceCollectionService
         ?string $collectionTitle = null,
     ): NodeAddress {
         $contentRepository = $this->contentRepositoryRegistry->get($contentRepositoryId);
-        $rootNodeAggregateId = $this->findOrCreateRootNodeAggregateId($contentRepository);
-        $nodeName = NodeName::fromString($collectionName);
 
-        $collection = $this->findCollection($contentRepository, $rootNodeAggregateId, $nodeName);
-
-        if ($collection !== null) {
-            $collectionNodeAggregateId = $collection->aggregateId;
-        } else {
-            $collectionNodeAggregateId = NodeAggregateId::create();
-            $contentRepository->handle(
-                CreateNodeAggregateWithNode::create(
-                    WorkspaceName::forLive(),
-                    $collectionNodeAggregateId,
-                    NodeTypeName::fromString($this->configuration['collectionNodeType']),
-                    OriginDimensionSpacePoint::fromDimensionSpacePoint(
-                        $this->rootGeneralization($contentRepository)
-                    ),
-                    $rootNodeAggregateId,
-                )
-                    ->withNodeName($nodeName)
-                    ->withInitialPropertyValues(
-                        PropertyValuesToWrite::fromArray([
-                            'title' => $collectionTitle ?? $collectionName,
-                        ])
-                    )
-            );
-        }
+        $collectionNodeAggregateId = $this->securityContext->withoutAuthorizationChecks(
+            fn (): NodeAggregateId => $this->findOrCreateTaggedCollection(
+                $contentRepository,
+                $collectionName,
+                $collectionTitle,
+            )
+        );
 
         // Hand back an address that actually resolves - otherwise the editor runs
         // into an empty FlowQuery context and an error that says nothing.
@@ -112,6 +104,57 @@ class ResourceCollectionService
             $dimensionSpacePoint,
             $collectionNodeAggregateId,
         );
+    }
+
+    private function findOrCreateTaggedCollection(
+        ContentRepository $contentRepository,
+        string $collectionName,
+        ?string $collectionTitle,
+    ): NodeAggregateId {
+        $rootNodeAggregateId = $this->findOrCreateRootNodeAggregateId($contentRepository);
+        $nodeName = NodeName::fromString($collectionName);
+        $generalization = $this->rootGeneralization($contentRepository);
+
+        $collection = $this->findCollection($contentRepository, $rootNodeAggregateId, $nodeName);
+
+        if ($collection !== null) {
+            $collectionNodeAggregateId = $collection->aggregateId;
+            $isTagged = $collection->tags->withoutInherited()->contain(ResourcePermissions::subtreeTag());
+        } else {
+            $isTagged = false;
+            $collectionNodeAggregateId = NodeAggregateId::create();
+            $contentRepository->handle(
+                CreateNodeAggregateWithNode::create(
+                    WorkspaceName::forLive(),
+                    $collectionNodeAggregateId,
+                    NodeTypeName::fromString($this->configuration['collectionNodeType']),
+                    OriginDimensionSpacePoint::fromDimensionSpacePoint($generalization),
+                    $rootNodeAggregateId,
+                )
+                    ->withNodeName($nodeName)
+                    ->withInitialPropertyValues(
+                        PropertyValuesToWrite::fromArray([
+                            'title' => $collectionTitle ?? $collectionName,
+                        ])
+                    )
+            );
+        }
+
+        if (!$isTagged) {
+            // The tag is what the ManageResources privilege matches; the collection's
+            // resources inherit it, in every dimension the collection shines into.
+            $contentRepository->handle(
+                TagSubtree::create(
+                    WorkspaceName::forLive(),
+                    $collectionNodeAggregateId,
+                    $generalization,
+                    NodeVariantSelectionStrategy::STRATEGY_ALL_SPECIALIZATIONS,
+                    ResourcePermissions::subtreeTag(),
+                )
+            );
+        }
+
+        return $collectionNodeAggregateId;
     }
 
     private function findCollection(
