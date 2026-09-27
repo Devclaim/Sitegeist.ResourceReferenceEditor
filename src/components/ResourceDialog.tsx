@@ -1,5 +1,4 @@
 import React from 'react';
-import ReactDOM from 'react-dom';
 import {Dialog, Icon} from '@neos-project/react-ui-components';
 
 import {useRegistries} from '../context/Registries';
@@ -42,8 +41,6 @@ export const ResourceDialog: React.FC<{
     onCloseSecondaryInspector: () => void;
     /** Shown above everything else - the collection tabs of the resource manager. */
     header?: React.ReactNode;
-    /** Covers the whole backend like a module page, instead of a dialog. */
-    asPage?: boolean;
 }> = ({
     isOpen,
     onClose,
@@ -58,8 +55,7 @@ export const ResourceDialog: React.FC<{
     renderSecondaryInspector,
     secondaryInspector,
     onCloseSecondaryInspector,
-    header,
-    asPage = false
+    header
 }) => {
     const {nodeTypesRegistry, i18nRegistry, t} = useRegistries();
     const [filter, setFilter] = React.useState('');
@@ -271,35 +267,6 @@ export const ResourceDialog: React.FC<{
         </div>
     </>
     );
-
-    // Escape on the page closes an open secondary editor, as in the sidebar - the page
-    // itself is a module and stays; nor while a dialog of its own is in front of it.
-    React.useEffect(() => {
-        if (!asPage || !isOpen || !secondaryInspector) {
-            return undefined;
-        }
-
-        const onKeyDown = (event: KeyboardEvent): void => {
-            if (event.key === 'Escape' && !document.querySelector('[role="dialog"]')) {
-                onCloseSecondaryInspector();
-            }
-        };
-
-        document.addEventListener('keydown', onKeyDown);
-
-        return () => document.removeEventListener('keydown', onKeyDown);
-    }, [asPage, isOpen, secondaryInspector, onCloseSecondaryInspector]);
-
-    if (asPage) {
-        // The resource manager: the same editor, covering the whole backend like a
-        // module page instead of floating in a dialog.
-        return isOpen
-            ? ReactDOM.createPortal(
-                <div className="sitegeist-resource-reference-editor__page">{body}</div>,
-                document.body
-            )
-            : null;
-    }
 
     return (
         <Dialog

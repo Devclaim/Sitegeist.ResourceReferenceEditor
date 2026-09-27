@@ -1,10 +1,9 @@
 import React from 'react';
-import {Button, Dialog, Icon, IconButton} from '@neos-project/react-ui-components';
+import {Button, Dialog, IconButton} from '@neos-project/react-ui-components';
 
-import {basePathOf} from '../api/endpoints';
 import {useRegistries} from '../context/Registries';
 import {ManagedCollection, managedCollectionsOf} from '../domain/collections';
-import {setManagerOpen, useManagerOpen} from '../domain/managerState';
+import {closeManager, openManager, useManagerState} from '../domain/managerState';
 import {NO_REFERENCES} from '../hooks/useReferences';
 import {useResourceEditor} from '../hooks/useResourceEditor';
 import {styles} from '../styles';
@@ -41,7 +40,6 @@ const CollectionPanel: React.FC<{
         <>
             <ResourceDialog
                 isOpen
-                asPage
                 header={header}
                 onClose={() => {
                     secondary.close();
@@ -76,62 +74,42 @@ const CollectionPanel: React.FC<{
 };
 
 /**
- * The resource manager - the backend module for resources. It is the field's own
- * dialog, with the collections of the installation as tabs above it. It lives in the
- * Neos UI rather than as a module page of its own, because that is where the
- * inspector's editors, the media browser and the image cropper exist; the module
- * menu entry leads here.
+ * The resource manager: the field's own dialog, with the collections of the
+ * installation as tabs on top. It is opened from the Resources section in the left
+ * sidebar and from the button in the top bar, which is what this component renders
+ * in its place - the dialog itself floats above everything, wherever it is mounted.
  */
 export const ResourceManager: React.FC<{
     routes: any;
-    /** On /neos/management/resources, where the manager is the page. */
-    isManagerPage: boolean;
-    /** Whether this user sees the entry at all - the module privilege. */
-    isAvailable: boolean;
     className?: string;
-}> = ({routes, isManagerPage, isAvailable, className}) => {
-    const {nodeTypesRegistry, i18nRegistry, store, t} = useRegistries();
-    const isOpen = useManagerOpen();
-    const base = basePathOf(routes);
-
-    React.useEffect(() => {
-        if (isManagerPage && isAvailable) {
-            setManagerOpen(true);
-        }
-    }, []);
-
-    // Entering and leaving are real page changes, as between any two modules:
-    // closing goes to the content module, on the document it had open.
-    const close = (): void => {
-        const documentNode = store.getState()?.cr?.nodes?.documentNode;
-
-        window.location.href = `${base}/neos/content`
-            + (typeof documentNode === 'string' ? `?node=${encodeURIComponent(documentNode)}` : '');
-    };
+}> = ({routes, className}) => {
+    const {nodeTypesRegistry, i18nRegistry, t} = useRegistries();
+    const {isOpen, collection: requested} = useManagerState();
     const collections = React.useMemo(
         () => managedCollectionsOf(nodeTypesRegistry, i18nRegistry),
         [nodeTypesRegistry, i18nRegistry]
     );
-    const [active, setActive] = React.useState<string | null>(
-        collections[0]?.name ?? null
-    );
-    const current = collections.find(collection => collection.name === active) ?? null;
+    const [active, setActive] = React.useState<string | null>(null);
 
-    if (!isAvailable) {
-        return null;
-    }
+    // Opening on a collection - from the sidebar - shows its tab.
+    React.useEffect(() => {
+        if (isOpen) {
+            setActive(requested ?? collections[0]?.name ?? null);
+        }
+    }, [isOpen, requested]);
+
+    const current = collections.find(collection => collection.name === active) ?? collections[0] ?? null;
 
     const header = (
-        <>
-            <div className="sitegeist-resource-reference-editor__manager-tabs" role="tablist">
+        <div className="sitegeist-resource-reference-editor__manager-tabs" role="tablist">
             {collections.map(collection => (
                 <button
                     key={collection.name}
                     type="button"
                     role="tab"
-                    aria-selected={collection.name === active}
+                    aria-selected={collection.name === current?.name}
                     className={'sitegeist-resource-reference-editor__manager-tab'
-                        + (collection.name === active
+                        + (collection.name === current?.name
                             ? ' sitegeist-resource-reference-editor__manager-tab--active'
                             : '')}
                     onClick={() => setActive(collection.name)}
@@ -139,8 +117,7 @@ export const ResourceManager: React.FC<{
                     {collection.label}
                 </button>
             ))}
-            </div>
-        </>
+        </div>
     );
 
     return (
@@ -150,9 +127,7 @@ export const ResourceManager: React.FC<{
                 icon="box-archive"
                 title={t('manager.open', 'Resources')}
                 aria-label={t('manager.open', 'Resources')}
-                onClick={() => {
-                    window.location.href = `${base}/neos/management/resources`;
-                }}
+                onClick={() => openManager()}
             />
             {isOpen && (
                 <>
@@ -166,11 +141,11 @@ export const ResourceManager: React.FC<{
                                 collection={current}
                                 routes={routes}
                                 header={header}
-                                onClose={close}
+                                onClose={closeManager}
                             />
                         )
                         : (
-                            <EmptyManager onClose={close} />
+                            <EmptyManager onClose={closeManager} />
                         )}
                 </>
             )}
@@ -200,33 +175,5 @@ const EmptyManager: React.FC<{onClose: () => void}> = ({onClose}) => {
                 )}
             </div>
         </Dialog>
-    );
-};
-
-/**
- * The page's breadcrumb, in the top bar next to the Neos logo - where a module page
- * has the rest of its chrome - shown while the manager is open. Same entries and
- * colours as the breadcrumb of Neos' module pages.
- */
-export const ResourceManagerBreadcrumb: React.FC<{routes: any}> = ({routes}) => {
-    const {i18nRegistry, t} = useRegistries();
-    const isOpen = useManagerOpen();
-
-    if (!isOpen) {
-        return null;
-    }
-
-    return (
-        <nav className="sitegeist-resource-reference-editor__breadcrumb" aria-label="Breadcrumb">
-            <a href={`${basePathOf(routes)}/neos/management`}>
-                <Icon icon="briefcase" />
-                {i18nRegistry.translate('Neos.Neos:Modules:management.label', 'Management')}
-            </a>
-            <span className="sitegeist-resource-reference-editor__breadcrumb-divider">/</span>
-            <span className="sitegeist-resource-reference-editor__breadcrumb-current">
-                <Icon icon="box-archive" />
-                {t('module.label', 'Resources')}
-            </span>
-        </nav>
     );
 };

@@ -53,58 +53,6 @@ export const styles = `
         z-index: calc(var(--zIndex-SecondaryInspectorElevated, 60) + 1);
     }
     /*
-     * The resource manager: the whole backend below the top bar, like a module page,
-     * with the list and the inspector scrolling on their own as in the dialog. The
-     * top bar stays - with the module menu, and the page's breadcrumb next to the
-     * logo - while the content view's own actions in it are put away.
-     *
-     * It stays under the module menu drawer (45) and under every dialog it opens (55).
-     */
-    .sitegeist-resource-reference-editor__page {
-        position: fixed;
-        top: calc(var(--spacing-GoldenUnit, 40px) + 1px);
-        right: 0;
-        bottom: 0;
-        left: 0;
-        z-index: calc(var(--zIndex-Drawer, 45) - 1);
-        display: flex;
-        flex-direction: column;
-        background: var(--colors-ContrastDarkest, #141414);
-        color: var(--colors-ContrastBrightest, #fff);
-        font-family: 'Noto Sans', sans-serif;
-    }
-    body:has(.sitegeist-resource-reference-editor__page) [class*="primaryToolbar__rightSidedActions"] {
-        visibility: hidden;
-    }
-    /* The logo's group is as wide as the sidebar; the breadcrumb runs on past it. */
-    body:has(.sitegeist-resource-reference-editor__page) [class*="primaryToolbar__leftSidedActions"] {
-        flex-basis: auto;
-    }
-    /* As the breadcrumb of Neos' module pages (Lite.css, .neos-breadcrumb). */
-    .sitegeist-resource-reference-editor__breadcrumb {
-        display: flex;
-        align-items: center;
-        padding: 0 var(--spacing-Full, 16px);
-        font-size: 14px;
-        line-height: 40px;
-        white-space: nowrap;
-    }
-    .sitegeist-resource-reference-editor__breadcrumb a {
-        color: #fff;
-        text-decoration: none;
-    }
-    .sitegeist-resource-reference-editor__breadcrumb a:hover,
-    .sitegeist-resource-reference-editor__breadcrumb-current {
-        color: #00b5ff;
-    }
-    .sitegeist-resource-reference-editor__breadcrumb svg {
-        padding-right: 5px;
-    }
-    .sitegeist-resource-reference-editor__breadcrumb-divider {
-        padding: 0 5px;
-        color: #ccc;
-    }
-    /*
      * The dialog itself must not scroll - only the list and the inspector do. Neos'
      * dialog body scrolls by default (overflow-y: auto on .dialog__body) and its
      * contents are capped at 80vh, so the body is turned into a flex box of a fixed
@@ -689,6 +637,74 @@ export const styles = `
         left: 0;
         height: 2px;
         background: var(--colors-PrimaryBlue, #00adee);
+    }
+    /*
+     * The Resources section of the left sidebar, below the content tree - with the
+     * toggle row of the content tree (ToggleContentTree in the Neos UI) and rows in
+     * the measure of its tree nodes.
+     */
+    .sitegeist-resource-reference-editor__sidebar-host {
+        flex: 0 0 auto;
+        margin-right: var(--spacing-Quarter, 4px);
+    }
+    .sitegeist-resource-reference-editor__sidebar {
+        border-top: 1px solid var(--colors-ContrastDark, #3f3f3f);
+        background: var(--colors-ContrastDarkest, #141414);
+        color: var(--colors-ContrastBrightest, #fff);
+        font-family: 'Noto Sans', sans-serif;
+        font-size: 14px;
+    }
+    .sitegeist-resource-reference-editor__sidebar-toggle {
+        display: flex;
+        align-items: center;
+        height: var(--spacing-GoldenUnit, 40px);
+        cursor: pointer;
+    }
+    .sitegeist-resource-reference-editor__sidebar-toggle-button {
+        width: 46px;
+        background: var(--colors-ContrastDarkest, #141414);
+    }
+    .sitegeist-resource-reference-editor__sidebar-label {
+        padding-left: 9px;
+        line-height: 40px;
+        font-weight: bold;
+    }
+    .sitegeist-resource-reference-editor__sidebar-list {
+        max-height: 40vh;
+        overflow-y: auto;
+        margin: 0;
+        padding: 0 0 8px;
+        list-style: none;
+        background: var(--colors-ContrastDarker, #222);
+        border-top: 1px solid var(--colors-ContrastDark, #3f3f3f);
+    }
+    .sitegeist-resource-reference-editor__sidebar-item {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        width: 100%;
+        height: 32px;
+        padding: 0 var(--spacing-Full, 16px) 0 38px;
+        border: 0;
+        background: none;
+        color: inherit;
+        font: inherit;
+        text-align: left;
+        cursor: pointer;
+    }
+    .sitegeist-resource-reference-editor__sidebar-item:hover {
+        background: var(--colors-ContrastNeutral, #323232);
+        color: var(--colors-PrimaryBlue, #00adee);
+    }
+    .sitegeist-resource-reference-editor__sidebar-item-label {
+        flex: 1;
+        min-width: 0;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+    }
+    .sitegeist-resource-reference-editor__sidebar-count {
+        color: var(--colors-ContrastBright, #999);
     }
 `;
 

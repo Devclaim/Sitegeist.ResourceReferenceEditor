@@ -2,8 +2,8 @@ import React from 'react';
 import manifest from '@neos-project/neos-ui-extensibility';
 
 import {watchCreationDialog} from './api/creationDialog';
-import {isManagerAddress, keepManagerAddressClean} from './domain/managerState';
-import {ResourceManager, ResourceManagerBreadcrumb} from './components/ResourceManager';
+import {ResourceManager} from './components/ResourceManager';
+import {ResourceSidebarSection} from './components/ResourceSidebarSection';
 import {ResourceReferenceEditor} from './components/ResourceReferenceEditor';
 import {RegistriesProvider} from './context/Registries';
 import {EditorProps, Registry, Store} from './types';
@@ -52,36 +52,22 @@ manifest('Sitegeist.ResourceReferenceEditor', {}, (globalRegistry: Registry, {st
         i18nRegistry
     };
 
-    // The resource manager has a module address of its own,
-    // /neos/management/resources, which serves the Neos UI (see Routes.yaml) - on
-    // that page, the manager is what is shown.
-    const isManagerPage = isManagerAddress();
-
-    globalRegistry.get('sagas')?.set(
-        'Sitegeist.ResourceReferenceEditor/ManagerAddress',
-        {saga: keepManagerAddressClean}
-    );
-
+    // The resource manager, opened from the top bar and from the left sidebar.
     globalRegistry.get('containers')?.set(
         'PrimaryToolbar/Right/SitegeistResourceManager',
         ({className}: {className?: string}) => (
             <RegistriesProvider registries={registries}>
-                <ResourceManager
-                    className={className}
-                    routes={routes}
-                    isManagerPage={isManagerPage}
-                    isAvailable={userMaySeeManager()}
-                />
+                <ResourceManager className={className} routes={routes} />
             </RegistriesProvider>
         ),
         'start'
     );
 
     globalRegistry.get('containers')?.set(
-        'PrimaryToolbar/Left/SitegeistResourceManagerBreadcrumb',
+        'LeftSideBar/Top/SitegeistResources',
         () => (
             <RegistriesProvider registries={registries}>
-                <ResourceManagerBreadcrumb routes={routes} />
+                <ResourceSidebarSection routes={routes} />
             </RegistriesProvider>
         ),
         'end'
@@ -100,27 +86,3 @@ manifest('Sitegeist.ResourceReferenceEditor', {}, (globalRegistry: Registry, {st
     });
 });
 
-
-/**
- * Whether the resource manager's module is in this user's module menu - the menu the
- * backend renders into the page is already filtered by the module privilege, so the
- * toolbar button follows the same rule as the menu entry.
- */
-const userMaySeeManager = (): boolean => {
-    try {
-        const initialData = JSON.parse(document.getElementById('initialData')?.textContent ?? '{}');
-        const uris: string[] = [];
-        const collect = (entries: unknown): void => Object.values(entries ?? {}).forEach((entry: any) => {
-            if (typeof entry?.uri === 'string') {
-                uris.push(entry.uri);
-            }
-            collect(entry?.children);
-        });
-
-        collect(initialData?.menu);
-
-        return uris.some(uri => /\/management\/resources(?:[?#]|$)/.test(uri));
-    } catch (exception) {
-        return false;
-    }
-};

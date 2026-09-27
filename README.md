@@ -18,10 +18,8 @@ Requires Neos 9.1 and PackageFactory.OPGM.
 - Reorder by drag and drop or Alt+↑/↓
 - Multi select with *Select multiple* or shift+click
 - Delete warns about documents that still use the resource
-- Resource manager at `/neos/management/resources` (*Management → Resources*, or
-  the top bar button): the same editor on a page of its own, one tab per collection.
-  Unlike a classic Fluid module it runs inside the Neos UI - the editors only exist
-  there - so the package routes that address to the Neos UI
+- Resource manager: all collections in one dialog, one tab each - opened from the
+  *Ressourcen* section in the left sidebar (below the content tree) or the top bar
 - Managing resources is limited to administrators by default
 
 ## Tutorial
@@ -78,10 +76,9 @@ first use.
 
 ## Permissions
 
-Using resources and opening the resource manager is open to every editor
-(`Sitegeist.ResourceReferenceEditor:Module.Show`). Managing them takes
-`Sitegeist.ResourceReferenceEditor:ManageResources`, granted to administrators. To
-allow editors:
+Using resources and opening the resource manager is open to every editor. Managing
+them takes `Sitegeist.ResourceReferenceEditor:ManageResources`, granted to
+administrators. To allow editors:
 
 ```yaml
 roles:
